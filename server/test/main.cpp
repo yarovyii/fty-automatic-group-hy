@@ -3,10 +3,12 @@
 
 #include <catch2/catch.hpp>
 #include "lib/config.h"
+#include <fty_log.h>
 
 int main(int argc, char* argv[])
 {
     if (auto ret = fty::Config::instance().load("test/conf/agroup.conf")) {
+        ManageFtyLog::setInstanceFtylog(fty::Config::instance().actorName, fty::Config::instance().logger);
         int result = Catch::Session().run(argc, argv);
         return result;
     } else {

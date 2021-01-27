@@ -1,5 +1,5 @@
 #pragma once
-#include "group.h"
+#include "common/group.h"
 #include <fty/expected.h>
 
 namespace fty {

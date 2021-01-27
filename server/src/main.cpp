@@ -1,10 +1,14 @@
+#include "common/logger.h"
+#include "lib/config.h"
+#include "lib/daemon.h"
+#include "lib/server.h"
 #include <fty/command-line.h>
 #include <iostream>
 
 int main(int argc, char** argv)
 {
     bool        daemon = false;
-    std::string config = "conf/discovery.conf";
+    std::string config = "conf/agroup.conf";
     bool        help   = false;
 
     // clang-format off
@@ -25,6 +29,27 @@ int main(int argc, char** argv)
     if (help) {
         std::cout << cmd.help() << std::endl;
         return EXIT_SUCCESS;
+    }
+
+    if (auto ret = fty::Config::instance().load(config)) {
+        logError(ret.error());
+        return EXIT_FAILURE;
+    }
+
+    ManageFtyLog::setInstanceFtylog(fty::Config::instance().actorName, fty::Config::instance().logger);
+
+    if (daemon) {
+        logDebug("Start discovery agent as daemon");
+        fty::Daemon::daemonize();
+    }
+
+    fty::Server srv;
+    if (auto res = srv.run()) {
+        srv.wait();
+        srv.shutdown();
+    } else {
+        logError(res.error());
+        return EXIT_FAILURE;
     }
 
     return EXIT_SUCCESS;

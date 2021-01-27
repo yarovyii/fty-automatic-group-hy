@@ -1,0 +1,3 @@
+actor-name:   automatic-group
+logger:       logger.conf
+dbpath:       '${CMAKE_INSTALL_FULL_LOCALSTATEDIR}/automatic-group/storage.yaml'

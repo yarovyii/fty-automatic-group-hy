@@ -1,4 +1,4 @@
-#include "group.h"
+#include "common/group.h"
 
 namespace fty {
 

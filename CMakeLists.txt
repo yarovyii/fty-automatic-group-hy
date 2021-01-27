@@ -11,6 +11,7 @@ project(fty-automatic-group
 find_package(fty-cmake PATHS ${CMAKE_BINARY_DIR}/fty-cmake)
 ########################################################################################################################
 
+add_subdirectory(common)
 add_subdirectory(server)
 add_subdirectory(rest)
 
