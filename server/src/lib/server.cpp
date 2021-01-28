@@ -7,6 +7,7 @@
 #include "jobs/remove.h"
 #include "jobs/list.h"
 #include "jobs/read.h"
+#include "jobs/resolve.h"
 
 namespace fty {
 
@@ -54,8 +55,8 @@ void Server::process(const Message& msg)
         m_pool.pushWorker<job::List>(msg, m_bus);
     } else if (msg.meta.subject == commands::read::Subject) {
         m_pool.pushWorker<job::Read>(msg, m_bus);
-//    } else if (msg.meta.subject == "RESOLVE") {
-//        m_pool.pushWorker<job::Resolve>(msg, m_bus);
+    } else if (msg.meta.subject == commands::resolve::Subject) {
+        m_pool.pushWorker<job::Resolve>(msg, m_bus);
     }
 }
 
