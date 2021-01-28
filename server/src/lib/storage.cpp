@@ -173,7 +173,7 @@ Expected<Group> Storage::save(const Group& group)
         return unexpected(ret.error());
     }
 
-    return toSave;
+    return std::move(toSave);
 }
 
 Expected<void> Storage::removeByName(const std::string& groupName)

@@ -18,6 +18,12 @@ etn_target(static ${PROJECT_NAME}-static
         src/lib/jobs/create.cpp
         src/lib/jobs/update.h
         src/lib/jobs/update.cpp
+        src/lib/jobs/remove.h
+        src/lib/jobs/remove.cpp
+        src/lib/jobs/list.h
+        src/lib/jobs/list.cpp
+        src/lib/jobs/read.h
+        src/lib/jobs/read.cpp
     INCLUDE_DIRS
         src
     USES

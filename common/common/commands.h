@@ -8,19 +8,19 @@ static constexpr const char* Channel = "FTY.Q.GROUP.QUERY";
 namespace commands::create {
     static constexpr const char* Subject = "CREATE";
 
-    using In  = Group;
+    using In = Group;
 } // namespace commands::create
 
 namespace commands::update {
     static constexpr const char* Subject = "UPDATE";
 
-    using In  = Group;
+    using In = Group;
 } // namespace commands::update
 
 namespace commands::remove {
     static constexpr const char* Subject = "DELETE";
 
-    using In  = pack::UInt64;
+    using In = pack::UInt64;
 } // namespace commands::remove
 
 namespace commands::resolve {
@@ -42,8 +42,14 @@ namespace commands::list {
         META(Answer, id, name);
     };
 
-    using In  = pack::UInt64;
     using Out = pack::ObjectList<Answer>;
 } // namespace commands::list
+
+namespace commands::read {
+    static constexpr const char* Subject = "READ";
+
+    using In  = pack::UInt64;
+    using Out = Group;
+} // namespace commands::read
 
 } // namespace fty

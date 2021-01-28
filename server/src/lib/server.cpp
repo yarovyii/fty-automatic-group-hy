@@ -4,6 +4,9 @@
 #include "common/logger.h"
 #include "jobs/create.h"
 #include "jobs/update.h"
+#include "jobs/remove.h"
+#include "jobs/list.h"
+#include "jobs/read.h"
 
 namespace fty {
 
@@ -45,15 +48,14 @@ void Server::process(const Message& msg)
         m_pool.pushWorker<job::Create>(msg, m_bus);
     } else if (msg.meta.subject == commands::update::Subject) {
         m_pool.pushWorker<job::Update>(msg, m_bus);
-//    } else if (msg.meta.subject == "DELETE") {
-//        m_pool.pushWorker<job::Delete>(msg, m_bus);
+    } else if (msg.meta.subject == commands::remove::Subject) {
+        m_pool.pushWorker<job::Remove>(msg, m_bus);
+    } else if (msg.meta.subject == commands::list::Subject) {
+        m_pool.pushWorker<job::List>(msg, m_bus);
+    } else if (msg.meta.subject == commands::read::Subject) {
+        m_pool.pushWorker<job::Read>(msg, m_bus);
 //    } else if (msg.meta.subject == "RESOLVE") {
 //        m_pool.pushWorker<job::Resolve>(msg, m_bus);
-    }
-    Message answ;
-    answ.meta.status = Message::Status::Ok;
-    if (auto ret = m_bus.reply(Channel, msg, answ); !ret) {
-        logError(ret.error());
     }
 }
 

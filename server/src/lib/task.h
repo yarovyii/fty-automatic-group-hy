@@ -78,7 +78,7 @@ public:
     }
 };
 
-template<>
+template <>
 class Response<void> : public pack::Node
 {
 public:
@@ -123,22 +123,26 @@ public:
     {
         Response<ResponseT> response;
         try {
-            if (m_in.userData.empty()) {
-                throw Error("Wrong input data: payload is empty");
-            }
-
-            InputT cmd;
-            if (auto parsedCmd = m_in.userData.decode<InputT>()) {
-                cmd = *parsedCmd;
-            } else {
-                throw Error("Wrong input data: format of payload is incorrect");
-            }
-
             if (auto it = dynamic_cast<T*>(this)) {
-                if constexpr (std::is_same<ResponseT, void>::value) {
-                    it->run(cmd);
-                } else {
-                    it->run(cmd, response.out);
+                if constexpr (!std::is_same<InputT, void>::value) {
+                    if (m_in.userData.empty()) {
+                        throw Error("Wrong input data: payload is empty");
+                    }
+
+                    InputT cmd;
+                    if (auto parsedCmd = m_in.userData.decode<InputT>()) {
+                        cmd = *parsedCmd;
+                    } else {
+                        throw Error("Wrong input data: format of payload is incorrect");
+                    }
+
+                    if constexpr (std::is_same<ResponseT, void>::value) {
+                        it->run(cmd);
+                    } else {
+                        it->run(cmd, response.out);
+                    }
+                } else if constexpr (!std::is_same<ResponseT, void>::value) {
+                    it->run(response.out);
                 }
             } else {
                 throw Error("Not a correct task");
