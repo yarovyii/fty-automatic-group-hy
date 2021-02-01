@@ -3,6 +3,7 @@
 #include "lib/config.h"
 #include "lib/server.h"
 #include <catch2/catch.hpp>
+#include "test-utils.h"
 
 static fty::Message message(const std::string& subj)
 {
@@ -27,15 +28,30 @@ TEST_CASE("Server request")
         FAIL(ret.error());
     }
 
+    // Db
+    assets::DataCenter dc("datacenter");
+    assets::Server srv1("srv1", dc);
+    assets::Server srv2("srv2", dc);
+    assets::Server srv3("srv3", dc);
+
+    assets::DataCenter dc1("datacenter1");
+    assets::Server srv11("srv11", dc1);
+    assets::Server srv21("srv21", dc1);
+
     // Group
     fty::Group group;
     group.name     = "My group";
     group.rules.op = fty::Group::LogicalOp::And;
 
     auto& cond  = group.rules.conditions.append();
-    cond.entity = "feed";
+    cond.entity = "srv";
     cond.field  = "name";
     cond.op     = fty::Group::ConditionOp::Contains;
+
+    auto& cond2  = group.rules.conditions.append();
+    cond2.entity = "datacenter";
+    cond2.field  = "location";
+    cond2.op     = fty::Group::ConditionOp::Is;
 
     // Create group
     {
@@ -74,6 +90,19 @@ TEST_CASE("Server request")
         CHECK((*info).name == "My group");
     }
 
+    // resolve group
+    {
+        fty::Message msg = message(fty::commands::resolve::Subject);
+        msg.userData.setString(fty::convert<std::string>(gId));
+        auto ret = bus.send(fty::Channel, msg);
+        REQUIRE(ret);
+        auto info = ret->userData.decode<fty::commands::resolve::Out>();
+        REQUIRE(info->size() == 3);
+        CHECK((*info)[0] == "srv1");
+        CHECK((*info)[1] == "srv2");
+        CHECK((*info)[2] == "srv3");
+    }
+
     // Delete group
     {
         fty::Message msg = message(fty::commands::remove::Subject);
@@ -81,4 +110,12 @@ TEST_CASE("Server request")
         auto ret = bus.send(fty::Channel, msg);
         REQUIRE(ret);
     }
+
+    deleteAsset(srv1);
+    deleteAsset(srv2);
+    deleteAsset(srv3);
+    deleteAsset(srv11);
+    deleteAsset(srv21);
+    deleteAsset(dc);
+    deleteAsset(dc1);
 }

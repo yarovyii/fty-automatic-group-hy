@@ -31,6 +31,7 @@ etn_target(static ${PROJECT_NAME}-static
     USES
         ${PROJECT_NAME}-common
         pthread
+        fty-asset-libng
     PRIVATE
 )
 
@@ -44,6 +45,9 @@ etn_target(exe ${PROJECT_NAME}
         src/main.cpp
     USES
         ${PROJECT_NAME}-static
+        cxxtools
+        tntdb
+        fty_common_db
 )
 
 etn_configure_file(
@@ -67,6 +71,8 @@ etn_test(${PROJECT_NAME}-test
         test/main.cpp
         test/db.cpp
         test/request.cpp
+        test/resolve.cpp
+        test/test-utils.h
     CONFIGS
         test/conf/agroup.conf
         test/conf/logger.conf
@@ -74,6 +80,10 @@ etn_test(${PROJECT_NAME}-test
     INCLUDE_DIRS src
     USES
         ${PROJECT_NAME}-static
+        fty_common_db
+        tntdb
+        mysqld
+        cxxtools
 )
 
 ########################################################################################################################

@@ -14,13 +14,8 @@ struct Group : public pack::Node
     enum class ConditionOp
     {
         Contains,
-        Equal,
-        Less,
-        More,
-        LessEqual,
-        MoreEqual,
-        In,
-        Between
+        Is,
+        IsNot
     };
 
     struct Condition : public pack::Node
