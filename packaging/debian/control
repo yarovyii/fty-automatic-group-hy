@@ -1,0 +1,26 @@
+Source: fty-automatic-group
+Maintainer: Dim <dmitrijzukov@eaton.com>
+Build-Depends:
+    cmake (>=3.0),
+    debhelper (>= 9),
+    fty-cmake-dev,
+    fty-utils-dev,
+    libfty-common-logging-dev,
+    libfty-pack-dev,
+    libfty-common-messagebus-dev,
+    libfty-common-rest-dev,
+    libtntnet-dev,
+    fty-cmake-rest-dev,
+    libfty-asset-dev,
+    libfty-common-dev,
+    libfty-common-mlm-dev,
+    libcxxtools-dev
+Standards-Version: 1.0.0
+Section: devel
+Priority: extra
+
+Package: fty-automatic-group
+Architecture: any
+Depends:    ${shlibs:Depends},
+            ${misc:Depends}
+Description: fty-automatic-group service

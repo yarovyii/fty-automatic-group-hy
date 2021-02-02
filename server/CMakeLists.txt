@@ -64,26 +64,35 @@ etn_configure_file(
     DESTINATION ${CMAKE_INSTALL_FULL_SYSCONFDIR}/${PROJECT_NAME}
 )
 
+etn_configure_file(
+    ${PROJECT_NAME}.service.in
+
+    TARGET      ${PROJECT_NAME}
+    DESTINATION /usr/lib/systemd/system/
+)
+
 ########################################################################################################################
 
-etn_test(${PROJECT_NAME}-test
-    SOURCES
-        test/main.cpp
-        test/db.cpp
-        test/request.cpp
-        test/resolve.cpp
-        test/test-utils.h
-    CONFIGS
-        test/conf/agroup.conf
-        test/conf/logger.conf
+if (BUILD_TESTING)
+    etn_test(${PROJECT_NAME}-test
+        SOURCES
+            test/main.cpp
+            test/db.cpp
+            test/request.cpp
+            test/resolve.cpp
+            test/test-utils.h
+        CONFIGS
+            test/conf/agroup.conf
+            test/conf/logger.conf
 
-    INCLUDE_DIRS src
-    USES
-        ${PROJECT_NAME}-static
-        fty_common_db
-        tntdb
-        mysqld
-        cxxtools
-)
+        INCLUDE_DIRS src
+        USES
+            ${PROJECT_NAME}-static
+            fty_common_db
+            tntdb
+            mysqld
+            cxxtools
+    )
+endif()
 
 ########################################################################################################################

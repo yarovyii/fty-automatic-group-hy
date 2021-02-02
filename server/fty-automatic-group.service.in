@@ -1,0 +1,16 @@
+[Unit]
+Description=FTY automatic group service
+After=malamute.service network.target fty-db.target
+Requires=malamute.service network.target fty-db.target
+
+PartOf=bios.target
+
+[Service]
+Type=simple
+ExecStart=${INSTALL_DIR}/${NAME} --config=${CONFIG_DIR}/agroup.conf --daemon
+User=automatic-group-daemon
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+
+[Install]
+WantedBy=bios.target
