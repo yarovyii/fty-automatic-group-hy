@@ -91,6 +91,7 @@ if (BUILD_TESTING)
             fty_common_db
             tntdb
             mysqld
+            stdc++fs
             cxxtools
     )
 endif()
