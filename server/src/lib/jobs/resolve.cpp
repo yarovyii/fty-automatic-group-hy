@@ -83,9 +83,8 @@ void Resolve::run(const commands::resolve::In& groupId, commands::resolve::Out& 
         throw Error(group.error());
     }
 
-    std::cerr << "url: " << getenv("DBURL") << std::endl;
     // Normal connect in _this_ thread, otherwise tntdb will fail
-    tntdb::connect(getenv("DBURL"));
+    tntdb::connect(getenv("DBURL") ? getenv("DBURL") : DBConn::url);
     // Normal connection, continue my sad work with db
     tnt::Connection conn;
 
