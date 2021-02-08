@@ -22,7 +22,7 @@ struct Group : public pack::Node
     {
         pack::String            field  = FIELD("field");
         pack::Enum<ConditionOp> op     = FIELD("operator");
-        pack::String            entity = FIELD("Entity");
+        pack::String            value  = FIELD("value");
 
         using pack::Node::Node;
         META(Condition, field, op, entity);

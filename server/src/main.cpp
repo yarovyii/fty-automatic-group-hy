@@ -31,7 +31,7 @@ int main(int argc, char** argv)
         return EXIT_SUCCESS;
     }
 
-    if (auto ret = fty::Config::instance().load(config)) {
+    if (auto ret = fty::Config::instance().load(config); !ret) {
         logError(ret.error());
         return EXIT_FAILURE;
     }

@@ -38,9 +38,6 @@ etn_target(static ${PROJECT_NAME}-static
 ########################################################################################################################
 
 etn_target(exe ${PROJECT_NAME}
-    CONFIGS
-        conf/agroup.conf.in
-        conf/logger.conf.in
     SOURCES
         src/main.cpp
     USES

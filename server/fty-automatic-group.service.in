@@ -8,7 +8,7 @@ PartOf=bios.target
 [Service]
 Type=forking
 ExecStart=${INSTALL_DIR}/${NAME} --config=${CONFIG_DIR}/agroup.conf --daemon
-User=automatic-group-daemon
+#User=automatic-group-daemon
 ExecReload=/bin/kill -HUP $MAINPID
 Restart=always
 

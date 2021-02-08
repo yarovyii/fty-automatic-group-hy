@@ -17,8 +17,6 @@ etn_target(shared ${PROJECT_NAME}-rest
         src/list.cpp
         src/resolve.h
         src/resolve.cpp
-    CONFIGS
-        conf/54_agroups.xml.in
     USES
         fty-cmake-rest
         tntnet
