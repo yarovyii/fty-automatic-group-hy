@@ -3,8 +3,8 @@
 #include "common/message-bus.h"
 #include "group-rest.h"
 #include <fty/rest/component.h>
-#include <asset/asset-db.h>
 #include <asset/json.h>
+#include <fty/split.h>
 
 namespace fty::agroup {
 
@@ -38,15 +38,16 @@ unsigned Resolve::run()
         throw rest::errors::Internal(info.error());
     }
 
-    pack::StringList out;
+    std::vector<std::string> out;
     for(const auto& it: *info) {
-        if (auto res = asset::db::selectAssetElementByName(it.name)) {
-        } else {
-            throw rest::errors::Internal(res.error());
+        std::string json = asset::getJsonAsset(fty::convert<uint32_t>(it.id.value()));
+        if (json.empty()) {
+            throw rest::errors::Internal("Cannot build asset information");
         }
+        out.push_back(json);
     }
 
-    m_reply << *pack::json::serialize(*info);
+    m_reply << "[" << fty::implode(out, ", ") << "]";
 
     return HTTP_OK;
 }
