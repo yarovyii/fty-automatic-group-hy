@@ -57,15 +57,15 @@ TEST_CASE("Server request")
     group.name     = "My group";
     group.rules.op = fty::Group::LogicalOp::And;
 
-    auto& cond  = group.rules.conditions.append();
-    cond.entity = "srv";
-    cond.field  = "name";
-    cond.op     = fty::Group::ConditionOp::Contains;
+    auto& cond = group.rules.conditions.append();
+    cond.value = "srv";
+    cond.field = "name";
+    cond.op    = fty::Group::ConditionOp::Contains;
 
-    auto& cond2  = group.rules.conditions.append();
-    cond2.entity = "datacenter";
-    cond2.field  = "location";
-    cond2.op     = fty::Group::ConditionOp::Is;
+    auto& cond2 = group.rules.conditions.append();
+    cond2.value = "datacenter";
+    cond2.field = "location";
+    cond2.op    = fty::Group::ConditionOp::Is;
 
     // Create group
     {

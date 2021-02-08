@@ -10,7 +10,7 @@ TEST_CASE("DB")
     auto& cond     = group.rules.conditions.append();
     cond.field     = "name";
     cond.op        = fty::Group::ConditionOp::Contains;
-    cond.entity    = "value";
+    cond.value    = "value";
 
     auto ins = fty::Storage::save(group);
     REQUIRE(ins);

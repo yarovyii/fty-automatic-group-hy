@@ -25,7 +25,7 @@ struct Group : public pack::Node
         pack::String            value  = FIELD("value");
 
         using pack::Node::Node;
-        META(Condition, field, op, entity);
+        META(Condition, field, op, value);
     };
 
     struct Rules : public pack::Node
