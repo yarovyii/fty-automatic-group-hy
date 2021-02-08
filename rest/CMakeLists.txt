@@ -24,6 +24,7 @@ etn_target(shared ${PROJECT_NAME}-rest
         tntnet
         fty_common_rest
         ${PROJECT_NAME}-common
+        fty-asset-libng
         fty_common_messagebus
     TARGET_DESTINATION /usr/lib/bios
 )

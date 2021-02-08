@@ -76,9 +76,9 @@ static std::string byLocation(tnt::Connection& conn, const Group::Condition& con
     }
 }
 
-void Resolve::run(const commands::resolve::In& groupId, commands::resolve::Out& assetList)
+void Resolve::run(const commands::resolve::In& in, commands::resolve::Out& assetList)
 {
-    auto group = Storage::byId(groupId);
+    auto group = Storage::byId(in.id);
     if (!group) {
         throw Error(group.error());
     }
@@ -108,7 +108,9 @@ void Resolve::run(const commands::resolve::In& groupId, commands::resolve::Out& 
 
     try {
         for (const auto& row : conn.select(sql)) {
-            assetList.append(row.get("name"));
+            auto& line = assetList.append();
+            line.id    = row.get<u_int64_t>("id");
+            line.name  = row.get("name");
         }
     } catch (const std::exception& e) {
         throw Error(e.what());

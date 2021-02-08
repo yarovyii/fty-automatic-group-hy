@@ -3,6 +3,8 @@
 #include "common/message-bus.h"
 #include "group-rest.h"
 #include <fty/rest/component.h>
+#include <asset/asset-db.h>
+#include <asset/json.h>
 
 namespace fty::agroup {
 
@@ -34,6 +36,14 @@ unsigned Resolve::run()
     auto info = ret->userData.decode<fty::commands::resolve::Out>();
     if (!info) {
         throw rest::errors::Internal(info.error());
+    }
+
+    pack::StringList out;
+    for(const auto& it: *info) {
+        if (auto res = asset::db::selectAssetElementByName(it.name)) {
+        } else {
+            throw rest::errors::Internal(res.error());
+        }
     }
 
     m_reply << *pack::json::serialize(*info);

@@ -40,13 +40,14 @@ template <typename T>
 class Response : public pack::Node
 {
 public:
-    pack::String                error  = FIELD("error");
-    pack::Enum<Message::Status> status = FIELD("status");
-    T                           out    = FIELD("out");
+    pack::String                error   = FIELD("error");
+    pack::Enum<Message::Status> status  = FIELD("status");
+    pack::String                subject = FIELD("subject");
+    T                           out     = FIELD("out");
 
 public:
     using pack::Node::Node;
-    META(Response, error, status, out);
+    META(Response, error, status, subject, out);
 
 public:
     void setError(const std::string& errMsg)
@@ -59,6 +60,10 @@ public:
     {
         Message msg;
         msg.meta.status = status;
+        if (subject.hasValue()) {
+            msg.meta.subject = subject;
+        }
+
         if (status == Message::Status::Ok) {
             if (out.hasValue()) {
                 msg.userData.setString(*pack::json::serialize(out));
@@ -158,6 +163,18 @@ public:
             if (auto res = m_bus->reply(fty::Channel, m_in, response); !res) {
                 logError(res.error());
             }
+        }
+    }
+
+    template <typename Payload>
+    void notify(const std::string& subject, const Payload& payload)
+    {
+        Response<Payload> msg;
+        msg.subject = subject;
+        msg.out     = payload;
+
+        if (auto ret = m_bus->publish(fty::Events, msg); !ret) {
+            logError(ret.error());
         }
     }
 

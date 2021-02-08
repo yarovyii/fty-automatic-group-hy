@@ -49,6 +49,7 @@ public:
     [[nodiscard]] Expected<void> init(const std::string& actorName);
 
     [[nodiscard]] Expected<Message> send(const std::string& queue, const Message& msg);
+    [[nodiscard]] Expected<void>    publish(const std::string& queue, const Message& msg);
     [[nodiscard]] Expected<void>    reply(const std::string& queue, const Message& req, const Message& answ);
     [[nodiscard]] Expected<Message> recieve(const std::string& queue);
 

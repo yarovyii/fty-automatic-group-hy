@@ -64,6 +64,18 @@ Expected<Message> MessageBus::send(const std::string& queue, const Message& msg)
     }
 }
 
+Expected<void> MessageBus::publish(const std::string& queue, const Message& msg)
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+    msg.meta.from = m_actorName;
+    try {
+        m_bus->publish(queue, msg.toMessageBus());
+    } catch (messagebus::MessageBusException& ex) {
+        return unexpected(ex.what());
+    }
+    return {};
+}
+
 Expected<void> MessageBus::reply(const std::string& queue, const Message& req, const Message& answ)
 {
     std::lock_guard<std::mutex> lock(m_mutex);

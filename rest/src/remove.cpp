@@ -24,12 +24,23 @@ unsigned Remove::run()
     }
 
     auto msg = message(commands::remove::Subject);
-    msg.userData.setString(*strIdPrt);
+
+    fty::commands::remove::In in;
+    in.append(fty::convert<uint64_t>(*strIdPrt));
+
+    msg.userData.setString(*pack::json::serialize(in));
 
     auto ret = bus.send(fty::Channel, msg);
     if (!ret) {
         throw rest::errors::Internal(ret.error());
     }
+
+    auto info = ret->userData.decode<fty::commands::remove::Out>();
+    if (!info) {
+        throw rest::errors::Internal(info.error());
+    }
+
+    m_reply << *pack::json::serialize(*info);
 
     return HTTP_OK;
 }

@@ -3,10 +3,18 @@
 
 namespace fty::job {
 
-void Remove::run(const commands::remove::In& in)
+void Remove::run(const commands::remove::In& in, commands::remove::Out& out)
 {
-    if (auto ret = Storage::remove(in); !ret) {
-        throw Error(ret.error());
+    for(const auto& id: in) {
+        auto& line = out.append();
+        if (auto ret = Storage::remove(id); !ret) {
+            line.append(fty::convert<std::string>(id), ret.error());
+        } else {
+            line.append(fty::convert<std::string>(id), "Ok");
+            pack::UInt64 send;
+            send = id;
+            notify(commands::notify::Deleted, send);
+        }
     }
 }
 

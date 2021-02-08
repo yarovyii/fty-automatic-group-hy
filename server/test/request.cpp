@@ -2,8 +2,8 @@
 #include "common/message-bus.h"
 #include "lib/config.h"
 #include "lib/server.h"
-#include <catch2/catch.hpp>
 #include "test-utils.h"
+#include <catch2/catch.hpp>
 
 static fty::Message message(const std::string& subj)
 {
@@ -13,6 +13,14 @@ static fty::Message message(const std::string& subj)
     msg.meta.from    = "unit-test";
     return msg;
 }
+
+struct Listener
+{
+    void event(const fty::Message& msg)
+    {
+        std::cerr << msg.meta.subject.value() << std::endl;
+    }
+};
 
 TEST_CASE("Server request")
 {
@@ -28,15 +36,21 @@ TEST_CASE("Server request")
         FAIL(ret.error());
     }
 
+    Listener listen;
+    if (auto sub = bus.subsribe(fty::Events, &Listener::event, &listen); !sub) {
+        FAIL(sub.error());
+    }
+
+
     // Db
     assets::DataCenter dc("datacenter");
-    assets::Server srv1("srv1", dc);
-    assets::Server srv2("srv2", dc);
-    assets::Server srv3("srv3", dc);
+    assets::Server     srv1("srv1", dc);
+    assets::Server     srv2("srv2", dc);
+    assets::Server     srv3("srv3", dc);
 
     assets::DataCenter dc1("datacenter1");
-    assets::Server srv11("srv11", dc1);
-    assets::Server srv21("srv21", dc1);
+    assets::Server     srv11("srv11", dc1);
+    assets::Server     srv21("srv21", dc1);
 
     // Group
     fty::Group group;
@@ -66,7 +80,7 @@ TEST_CASE("Server request")
     // Read group's list
     {
         fty::Message msg = message(fty::commands::list::Subject);
-        auto ret = bus.send(fty::Channel, msg);
+        auto         ret = bus.send(fty::Channel, msg);
         REQUIRE(ret);
 
         auto info = ret->userData.decode<fty::commands::list::Out>();
@@ -81,7 +95,12 @@ TEST_CASE("Server request")
     // Read group
     {
         fty::Message msg = message(fty::commands::read::Subject);
-        msg.userData.setString(fty::convert<std::string>(gId));
+
+        fty::commands::read::In in;
+        in.id = gId;
+
+        msg.userData.setString(*pack::json::serialize(in));
+
         auto ret = bus.send(fty::Channel, msg);
         REQUIRE(ret);
 
@@ -93,20 +112,28 @@ TEST_CASE("Server request")
     // resolve group
     {
         fty::Message msg = message(fty::commands::resolve::Subject);
-        msg.userData.setString(fty::convert<std::string>(gId));
+
+        fty::commands::resolve::In in;
+        in.id = gId;
+
+        msg.userData.setString(*pack::json::serialize(in));
         auto ret = bus.send(fty::Channel, msg);
         REQUIRE(ret);
         auto info = ret->userData.decode<fty::commands::resolve::Out>();
         REQUIRE(info->size() == 3);
-        CHECK((*info)[0] == "srv1");
-        CHECK((*info)[1] == "srv2");
-        CHECK((*info)[2] == "srv3");
+        CHECK((*info)[0].name == "srv1");
+        CHECK((*info)[1].name == "srv2");
+        CHECK((*info)[2].name == "srv3");
     }
 
     // Delete group
     {
         fty::Message msg = message(fty::commands::remove::Subject);
-        msg.userData.setString(fty::convert<std::string>(gId));
+
+        fty::commands::remove::In in;
+        in.append(gId);
+
+        msg.userData.setString(*pack::json::serialize(in));
         auto ret = bus.send(fty::Channel, msg);
         REQUIRE(ret);
     }
