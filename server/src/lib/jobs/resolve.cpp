@@ -33,7 +33,7 @@ static std::string sqlLogicalOperator(const Group::LogicalOp& op)
 
 static std::string byName(const Group::Condition& cond)
 {
-    return "SELECT id_asset_element FROM t_bios_asset_element WHERE name {}"_format(sqlOperator(cond.op, cond.value));
+    return "SELECT id_asset_element FROM t_bios_asset_ext_attributes WHERE keytag='name' AND value {}"_format(sqlOperator(cond.op, cond.value));
 }
 
 static std::string byLocation(tnt::Connection& conn, const Group::Condition& cond)
@@ -78,6 +78,8 @@ static std::string byLocation(tnt::Connection& conn, const Group::Condition& con
 
 void Resolve::run(const commands::resolve::In& in, commands::resolve::Out& assetList)
 {
+    logDebug("resolve {}", *pack::json::serialize(in));
+
     auto group = Storage::byId(in.id);
     if (!group) {
         throw Error(group.error());

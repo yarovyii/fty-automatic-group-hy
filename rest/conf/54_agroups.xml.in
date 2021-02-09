@@ -1,4 +1,13 @@
 <mapping>
+    <target>agroup/resolve@lib${NAME}-rest</target>
+    <url>^/api/v1/admin/automaticgroup/(.+)/content$</url>
+    <method>GET</method>
+    <args>
+      <id>$1</id>
+    </args>
+</mapping>
+
+<mapping>
     <target>agroup/read@lib${NAME}-rest</target>
     <url>^/api/v1/admin/automaticgroup/(.+)$</url>
     <method>GET</method>
@@ -35,14 +44,5 @@
     <target>agroup/create@lib${NAME}-rest</target>
     <url>^/api/v1/admin/automaticgroup/?$</url>
     <method>POST</method>
-</mapping>
-
-<mapping>
-    <target>agroup/resolve@lib${NAME}-rest</target>
-    <url>^/api/v1/admin/automaticgroup/(.+)/content$</url>
-    <method>GET</method>
-    <args>
-      <id>$1</id>
-    </args>
 </mapping>
 

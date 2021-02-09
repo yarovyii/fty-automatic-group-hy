@@ -23,6 +23,7 @@ int main(int argc, char* argv[])
 
     if (auto ret = fty::Config::instance().load("test/conf/agroup.conf")) {
         ManageFtyLog::setInstanceFtylog(fty::Config::instance().actorName, fty::Config::instance().logger);
+        std::filesystem::remove(fty::Config::instance().dbpath.value());
         fty::TestDb db;
         if (auto res = db.create()) {
             std::string url = *res;

@@ -26,7 +26,11 @@ unsigned Resolve::run()
     }
 
     fty::Message msg = message(fty::commands::resolve::Subject);
-    msg.userData.setString(*strIdPrt);
+
+    fty::commands::resolve::In in;
+    in.id = fty::convert<uint16_t>(*strIdPrt);
+
+    msg.userData.setString(*pack::json::serialize(in));
 
     auto ret = bus.send(fty::Channel, msg);
     if (!ret) {

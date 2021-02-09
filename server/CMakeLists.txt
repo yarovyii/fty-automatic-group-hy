@@ -32,6 +32,7 @@ etn_target(static ${PROJECT_NAME}-static
         ${PROJECT_NAME}-common
         pthread
         fty-asset-libng
+        stdc++fs
     PRIVATE
 )
 
