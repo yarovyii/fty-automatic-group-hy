@@ -45,12 +45,17 @@ TEST_CASE("Server request")
     // Db
     assets::DataCenter dc("datacenter");
     assets::Server     srv1("srv1", dc);
+    srv1.setExtName("srv1");
     assets::Server     srv2("srv2", dc);
+    srv2.setExtName("srv2");
     assets::Server     srv3("srv3", dc);
+    srv3.setExtName("srv3");
 
     assets::DataCenter dc1("datacenter1");
     assets::Server     srv11("srv11", dc1);
+    srv11.setExtName("srv11");
     assets::Server     srv21("srv21", dc1);
+    srv21.setExtName("srv21");
 
     // Group
     fty::Group group;
