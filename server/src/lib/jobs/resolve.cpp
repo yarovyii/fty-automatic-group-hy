@@ -97,6 +97,8 @@ void Resolve::run(const commands::resolve::In& in, commands::resolve::Out& asset
             subQueries.push_back(byName(cond));
         } else if (cond.field == "location") {
             subQueries.push_back(byLocation(conn, cond));
+        } else {
+            throw Error("Unsupported field '{}' in condition", cond.field.value());
         }
     }
 
