@@ -1,6 +1,6 @@
 <mapping>
     <target>agroup/resolve@lib${NAME}-rest</target>
-    <url>^/api/v1/admin/automaticgroup/(.+)/content$</url>
+    <url>^/api/v1/automaticgroup/(.+)/content$</url>
     <method>GET</method>
     <args>
       <id>$1</id>
@@ -9,7 +9,7 @@
 
 <mapping>
     <target>agroup/read@lib${NAME}-rest</target>
-    <url>^/api/v1/admin/automaticgroup/(.+)$</url>
+    <url>^/api/v1/automaticgroup/(.+)$</url>
     <method>GET</method>
     <args>
       <id>$1</id>
@@ -18,7 +18,7 @@
 
 <mapping>
     <target>agroup/edit@lib${NAME}-rest</target>
-    <url>^/api/v1/admin/automaticgroup/(.+)$</url>
+    <url>^/api/v1/automaticgroup/(.+)$</url>
     <method>PUT</method>
     <args>
       <id>$1</id>
@@ -27,7 +27,7 @@
 
 <mapping>
     <target>agroup/remove@lib${NAME}-rest</target>
-    <url>^/api/v1/admin/automaticgroup/(.+)$</url>
+    <url>^/api/v1/automaticgroup/(.+)$</url>
     <method>DELETE</method>
     <args>
       <id>$1</id>
@@ -36,13 +36,13 @@
 
 <mapping>
     <target>agroup/list@lib${NAME}-rest</target>
-    <url>^/api/v1/admin/automaticgroup/?$</url>
+    <url>^/api/v1/automaticgroup/?$</url>
     <method>GET</method>
 </mapping>
 
 <mapping>
     <target>agroup/create@lib${NAME}-rest</target>
-    <url>^/api/v1/admin/automaticgroup/?$</url>
+    <url>^/api/v1/automaticgroup/?$</url>
     <method>POST</method>
 </mapping>
 
