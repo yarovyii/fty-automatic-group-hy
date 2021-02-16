@@ -36,6 +36,11 @@ static std::string byName(const Group::Condition& cond)
     return "SELECT id_asset_element FROM t_bios_asset_ext_attributes WHERE keytag='name' AND value {}"_format(sqlOperator(cond.op, cond.value));
 }
 
+static std::string byContact(const Group::Condition& cond)
+{
+    return "SELECT id_asset_element FROM t_bios_asset_ext_attributes WHERE keytag='name' AND value {}"_format(sqlOperator(cond.op, cond.value));
+}
+
 static std::string byLocation(tnt::Connection& conn, const Group::Condition& cond)
 {
     auto query = R"(
@@ -64,6 +69,10 @@ static std::string byLocation(tnt::Connection& conn, const Group::Condition& con
             }
         }
 
+        if (ids.empty()) {
+            throw Error("Cannot find any group with name {}", cond.value.value());
+        }
+
         return R"(
             SELECT
                 id_asset_element
@@ -74,6 +83,52 @@ static std::string byLocation(tnt::Connection& conn, const Group::Condition& con
     } catch (const std::exception& e) {
         throw Error(e.what());
     }
+}
+
+static std::string groupSql(tnt::Connection& conn, const Group::Rules& group)
+{
+    std::vector<std::string> subQueries;
+    for (const auto& it : group.conditions) {
+        if (it.is<Group::Condition>()) {
+            const auto& cond = it.get<Group::Condition>();
+            switch(cond.field) {
+            case Group::Fields::Contact:
+                subQueries.push_back(byContact(cond));
+                break;
+            case Group::Fields::HostName:
+                break;
+            case Group::Fields::IPAddress:
+                break;
+            case Group::Fields::Location:
+                subQueries.push_back(byLocation(conn, cond));
+                break;
+            case Group::Fields::Name:
+                subQueries.push_back(byName(cond));
+                break;
+            case Group::Fields::Type:
+                break;
+            case Group::Fields::Unknown:
+            default:
+                throw Error("Unsupported field '{}' in condition", cond.field.value());
+            }
+        } else {
+            subQueries.push_back(groupSql(conn, it.get<Group::Rules>()));
+        }
+    }
+
+    if (subQueries.empty()) {
+        throw Error("Request is empty");
+    }
+
+    std::string sql = R"(
+        SELECT
+            id_asset_element as id,
+            name
+        FROM t_bios_asset_element
+        WHERE id_asset_element IN ({})
+    )"_format(fty::implode(subQueries, ") " + sqlLogicalOperator(group.groupOp) + " id_asset_element IN ("));
+
+    return sql;
 }
 
 void Resolve::run(const commands::resolve::In& in, commands::resolve::Out& assetList)
@@ -90,25 +145,7 @@ void Resolve::run(const commands::resolve::In& in, commands::resolve::Out& asset
     // Normal connection, continue my sad work with db
     tnt::Connection conn;
 
-
-    std::vector<std::string> subQueries;
-    for (const auto& cond : group->rules.conditions) {
-        if (cond.field == "name") {
-            subQueries.push_back(byName(cond));
-        } else if (cond.field == "location") {
-            subQueries.push_back(byLocation(conn, cond));
-        } else {
-            throw Error("Unsupported field '{}' in condition", cond.field.value());
-        }
-    }
-
-    std::string sql = R"(
-        SELECT
-            id_asset_element as id,
-            name
-        FROM t_bios_asset_element
-        WHERE id_asset_element IN ({})
-    )"_format(fty::implode(subQueries, ") " + sqlLogicalOperator(group->rules.op) + " id_asset_element IN ("));
+    std::string sql = groupSql(conn, group->rules);
 
     try {
         for (const auto& row : conn.select(sql)) {

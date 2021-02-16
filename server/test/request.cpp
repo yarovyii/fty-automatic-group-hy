@@ -4,6 +4,8 @@
 #include "lib/server.h"
 #include "test-utils.h"
 #include <catch2/catch.hpp>
+#include <asset/db.h>
+#include <asset/test-db.h>
 
 static fty::Message message(const std::string& subj)
 {
@@ -24,6 +26,14 @@ struct Listener
 
 TEST_CASE("Server request")
 {
+    fty::TestDb db;
+    if (auto res = db.create()) {
+        std::string url = *res;
+        setenv("DBURL", url.c_str(), 1);
+    } else {
+        FAIL(res.error());
+    }
+
     fty::Server srv;
     auto        res = srv.run();
     if (!res) {
@@ -46,31 +56,37 @@ TEST_CASE("Server request")
     assets::DataCenter dc("datacenter");
     assets::Server     srv1("srv1", dc);
     srv1.setExtName("srv1");
-    assets::Server     srv2("srv2", dc);
+    assets::Server srv2("srv2", dc);
     srv2.setExtName("srv2");
-    assets::Server     srv3("srv3", dc);
+    assets::Server srv3("srv3", dc);
     srv3.setExtName("srv3");
 
     assets::DataCenter dc1("datacenter1");
     assets::Server     srv11("srv11", dc1);
     srv11.setExtName("srv11");
-    assets::Server     srv21("srv21", dc1);
+    assets::Server srv21("srv21", dc1);
     srv21.setExtName("srv21");
 
     // Group
     fty::Group group;
-    group.name     = "My group";
-    group.rules.op = fty::Group::LogicalOp::And;
+    group.name          = "My group";
+    group.rules.groupOp = fty::Group::LogicalOp::And;
 
-    auto& cond = group.rules.conditions.append();
-    cond.value = "srv";
-    cond.field = "name";
-    cond.op    = fty::Group::ConditionOp::Contains;
+    {
+        auto& var = group.rules.conditions.append();
+        auto& cond = var.reset<fty::Group::Condition>();
+        cond.value = "srv";
+        cond.field = fty::Group::Fields::Name;
+        cond.op    = fty::Group::ConditionOp::Contains;
+    }
 
-    auto& cond2 = group.rules.conditions.append();
-    cond2.value = "datacenter";
-    cond2.field = "location";
-    cond2.op    = fty::Group::ConditionOp::Is;
+    {
+        auto& var = group.rules.conditions.append();
+        auto& cond = var.reset<fty::Group::Condition>();
+        cond.value = "datacenter";
+        cond.field = fty::Group::Fields::Location;
+        cond.op    = fty::Group::ConditionOp::Is;
+    }
 
     // Create group
     {
@@ -150,4 +166,6 @@ TEST_CASE("Server request")
     deleteAsset(srv21);
     deleteAsset(dc);
     deleteAsset(dc1);
+
+    db.destroy();
 }

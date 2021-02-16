@@ -5,12 +5,27 @@
 TEST_CASE("DB")
 {
     fty::Group group;
-    group.name     = "group 1";
-    group.rules.op = fty::Group::LogicalOp::And;
-    auto& cond     = group.rules.conditions.append();
-    cond.field     = "name";
-    cond.op        = fty::Group::ConditionOp::Contains;
-    cond.value    = "value";
+    group.name          = "group 1";
+    group.rules.groupOp = fty::Group::LogicalOp::And;
+
+    {
+        auto& var  = group.rules.conditions.append();
+        auto& cond = var.reset<fty::Group::Condition>();
+        cond.field = fty::Group::Fields::Name;
+        cond.op    = fty::Group::ConditionOp::Contains;
+        cond.value = "value";
+    }
+
+    {
+        auto& var     = group.rules.conditions.append();
+        auto& rules   = var.reset<fty::Group::Rules>();
+        rules.groupOp = fty::Group::LogicalOp::Or;
+        auto& var1    = rules.conditions.append();
+        auto& cond    = var1.reset<fty::Group::Condition>();
+        cond.field    = fty::Group::Fields::Name;
+        cond.op       = fty::Group::ConditionOp::Contains;
+        cond.value    = "value";
+    }
 
     auto ins = fty::Storage::save(group);
     REQUIRE(ins);

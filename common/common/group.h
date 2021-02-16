@@ -18,11 +18,22 @@ struct Group : public pack::Node
         IsNot
     };
 
+    enum class Fields
+    {
+        Unknown,
+        Name,
+        Location,
+        Type,
+        Contact,
+        HostName,
+        IPAddress,
+    };
+
     struct Condition : public pack::Node
     {
-        pack::String            field  = FIELD("field");
-        pack::Enum<ConditionOp> op     = FIELD("operator");
-        pack::String            value  = FIELD("value");
+        pack::Enum<Fields>      field = FIELD("field");
+        pack::Enum<ConditionOp> op    = FIELD("operator");
+        pack::String            value = FIELD("value");
 
         using pack::Node::Node;
         META(Condition, field, op, value);
@@ -30,11 +41,11 @@ struct Group : public pack::Node
 
     struct Rules : public pack::Node
     {
-        pack::Enum<LogicalOp>       op         = FIELD("operator");
-        pack::ObjectList<Condition> conditions = FIELD("conditions");
+        pack::Enum<LogicalOp>                             groupOp    = FIELD("operator");
+        pack::ObjectList<pack::Variant<Rules, Condition>> conditions = FIELD("conditions");
 
         using pack::Node::Node;
-        META(Rules, op, conditions);
+        META(Rules, groupOp, conditions);
     };
 
     pack::UInt64 id    = FIELD("id");
@@ -49,6 +60,7 @@ std::ostream& operator<<(std::ostream& ss, fty::Group::ConditionOp value);
 std::istream& operator>>(std::istream& ss, fty::Group::ConditionOp& value);
 std::ostream& operator<<(std::ostream& ss, fty::Group::LogicalOp value);
 std::istream& operator>>(std::istream& ss, fty::Group::LogicalOp& value);
+std::ostream& operator<<(std::ostream& ss, fty::Group::Fields value);
+std::istream& operator>>(std::istream& ss, fty::Group::Fields& value);
 
 } // namespace fty
-
