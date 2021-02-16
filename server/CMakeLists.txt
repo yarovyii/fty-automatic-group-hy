@@ -77,7 +77,6 @@ if (BUILD_TESTING)
             test/main.cpp
             test/db.cpp
             test/request.cpp
-            test/resolve.cpp
             test/test-utils.h
         CONFIGS
             test/conf/agroup.conf
