@@ -32,7 +32,31 @@ unsigned List::run()
         throw rest::errors::Internal(info.error());
     }
 
-    m_reply << *pack::json::serialize(*info);
+    if (info->size()) {
+        pack::ObjectList<fty::commands::read::Out> out;
+        for(const auto& it: *info) {
+            fty::Message readMsg = message(fty::commands::read::Subject);
+
+            fty::commands::read::In in;
+            in.id = it.id;
+
+            readMsg.userData.setString(*pack::json::serialize(in));
+
+            auto readRet = bus.send(fty::Channel, readMsg);
+            if (!readRet) {
+                throw rest::errors::Internal(readRet.error());
+            }
+
+            auto group = ret->userData.decode<fty::commands::read::Out>();
+            if (!group) {
+                throw rest::errors::Internal(group.error());
+            }
+            out.append(*group);
+        }
+        m_reply << *pack::json::serialize(out);
+    } else {
+        m_reply << "[]";
+    }
 
     return HTTP_OK;
 }

@@ -2,6 +2,7 @@
 #include "asset/asset-db.h"
 #include "asset/db.h"
 #include "lib/storage.h"
+#include <fty_common_asset_types.h>
 
 namespace fty::job {
 
@@ -33,12 +34,39 @@ static std::string sqlLogicalOperator(const Group::LogicalOp& op)
 
 static std::string byName(const Group::Condition& cond)
 {
-    return "SELECT id_asset_element FROM t_bios_asset_ext_attributes WHERE keytag='name' AND value {}"_format(sqlOperator(cond.op, cond.value));
+    return R"(
+        SELECT
+            id_asset_element
+        FROM
+            t_bios_asset_ext_attributes
+        WHERE
+            keytag='name' AND
+            value {})"_format(sqlOperator(cond.op, cond.value));
 }
 
 static std::string byContact(const Group::Condition& cond)
 {
-    return "SELECT id_asset_element FROM t_bios_asset_ext_attributes WHERE keytag='name' AND value {}"_format(sqlOperator(cond.op, cond.value));
+    return R"(
+        SELECT
+            id_asset_element
+        FROM
+            t_bios_asset_ext_attributes
+        WHERE
+            (keytag='device.contact' OR keytag='contact_email') AND
+            value {})"_format(sqlOperator(cond.op, cond.value));
+}
+
+static std::string byType(const Group::Condition& cond)
+{
+    return R"(
+        SELECT
+            e.id_asset_element
+        FROM
+            t_bios_asset_element as e
+        LEFT JOIN t_bios_asset_device_type as t
+            ON e.id_subtype = t.id_asset_device_type
+        WHERE
+            t.name {})"_format(sqlOperator(cond.op, cond.value));
 }
 
 static std::string byLocation(tnt::Connection& conn, const Group::Condition& cond)
@@ -48,7 +76,9 @@ static std::string byLocation(tnt::Connection& conn, const Group::Condition& con
             id_asset_element
         FROM
             t_bios_asset_element
-        WHERE name {})"_format(sqlOperator(cond.op, cond.value));
+        WHERE
+            id_type={} AND
+            name {})"_format(persist::DATACENTER, sqlOperator(cond.op, cond.value));
 
     try {
         std::vector<int64_t> ids;
@@ -70,7 +100,13 @@ static std::string byLocation(tnt::Connection& conn, const Group::Condition& con
         }
 
         if (ids.empty()) {
-            throw Error("Cannot find any group with name {}", cond.value.value());
+            return R"(
+                SELECT
+                    id_asset_element
+                FROM
+                    t_bios_asset_element
+                WHERE id_asset_element = 0
+            )";
         }
 
         return R"(
@@ -106,6 +142,7 @@ static std::string groupSql(tnt::Connection& conn, const Group::Rules& group)
                 subQueries.push_back(byName(cond));
                 break;
             case Group::Fields::Type:
+                subQueries.push_back(byType(cond));
                 break;
             case Group::Fields::Unknown:
             default:
@@ -126,8 +163,10 @@ static std::string groupSql(tnt::Connection& conn, const Group::Rules& group)
             name
         FROM t_bios_asset_element
         WHERE id_asset_element IN ({})
+        ORDER BY id
     )"_format(fty::implode(subQueries, ") " + sqlLogicalOperator(group.groupOp) + " id_asset_element IN ("));
 
+    //std::cerr << sql << std::endl;
     return sql;
 }
 
@@ -156,6 +195,8 @@ void Resolve::run(const commands::resolve::In& in, commands::resolve::Out& asset
     } catch (const std::exception& e) {
         throw Error(e.what());
     }
+
+    conn.threadEnd();
 }
 
 } // namespace fty::job

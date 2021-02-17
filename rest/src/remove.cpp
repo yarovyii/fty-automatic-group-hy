@@ -40,7 +40,11 @@ unsigned Remove::run()
         throw rest::errors::Internal(info.error());
     }
 
-    m_reply << *pack::json::serialize(*info);
+    if (info->size()) {
+        m_reply << *pack::json::serialize(*info);
+    } else {
+        m_reply << "[]";
+    }
 
     return HTTP_OK;
 }

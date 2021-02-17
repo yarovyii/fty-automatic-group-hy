@@ -8,6 +8,7 @@
 #include "jobs/list.h"
 #include "jobs/read.h"
 #include "jobs/resolve.h"
+#include <asset/db.h>
 
 namespace fty {
 

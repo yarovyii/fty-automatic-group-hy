@@ -42,17 +42,17 @@ template <uint16_t Type, uint16_t SubType = 0>
 class AssetElement : public fty::asset::db::AssetElement
 {
 public:
-    AssetElement(const std::string& _name)
+    AssetElement(const std::string& _name, const std::string& extName = {})
     {
         name      = _name;
         status    = "active";
         priority  = 1;
         typeId    = Type;
         subtypeId = SubType;
-        create();
+        create(extName);
     }
 
-    AssetElement(const std::string& _name, const fty::asset::db::AssetElement& parent)
+    AssetElement(const std::string& _name, const fty::asset::db::AssetElement& parent, const std::string& extName = {})
     {
         parentId  = parent.id;
         name      = _name;
@@ -60,7 +60,7 @@ public:
         priority  = 1;
         typeId    = Type;
         subtypeId = SubType;
-        create();
+        create(extName);
     }
 
     void setExtName(const std::string& extName)
@@ -119,7 +119,7 @@ public:
     }
 
 private:
-    void create()
+    void create(const std::string& extName)
     {
         tnt::Connection conn;
         auto            ret = fty::asset::db::insertIntoAssetElement(conn, *this, true);
@@ -128,8 +128,15 @@ private:
         }
         REQUIRE(*ret > 0);
         id = *ret;
-    }
 
+        if (!extName.empty()) {
+            auto res = fty::asset::db::insertIntoAssetExtAttributes(conn, id, {{"name", extName}}, true);
+            if (!res) {
+                FAIL(res.error());
+            }
+            REQUIRE(*res > 0);
+        }
+    }
 };
 
 namespace assets {
