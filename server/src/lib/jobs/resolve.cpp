@@ -195,8 +195,6 @@ void Resolve::run(const commands::resolve::In& in, commands::resolve::Out& asset
     } catch (const std::exception& e) {
         throw Error(e.what());
     }
-
-    conn.threadEnd();
 }
 
 } // namespace fty::job
