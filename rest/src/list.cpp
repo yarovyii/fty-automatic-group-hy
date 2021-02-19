@@ -47,7 +47,7 @@ unsigned List::run()
                 throw rest::errors::Internal(readRet.error());
             }
 
-            auto group = ret->userData.decode<fty::commands::read::Out>();
+            auto group = readRet->userData.decode<fty::commands::read::Out>();
             if (!group) {
                 throw rest::errors::Internal(group.error());
             }
