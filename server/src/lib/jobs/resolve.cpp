@@ -8,17 +8,26 @@ namespace fty::job {
 
 using namespace fmt::literals;
 
-static std::string sqlOperator(const Group::ConditionOp& op, const std::string& value)
+static std::string op(const Group::Condition& cond)
 {
-    switch (op) {
+    switch (cond.op) {
         case Group::ConditionOp::Contains:
-            return "like '%{}%'"_format(value);
+            return "like";
         case Group::ConditionOp::Is:
-            return "= '{}'"_format(value);
+            return "=";
         case Group::ConditionOp::IsNot:
-            return "<> '{}'"_format(value);
+            return "<>";
     }
     return "unknown";
+}
+
+static std::string value(const Group::Condition& cond)
+{
+    if (cond.op == Group::ConditionOp::Contains) {
+        return "%{}%"_format(cond.value.value());
+    } else {
+        return cond.value.value();
+    }
 }
 
 static std::string sqlLogicalOperator(const Group::LogicalOp& op)
@@ -41,19 +50,31 @@ static std::string byName(const Group::Condition& cond)
             t_bios_asset_ext_attributes
         WHERE
             keytag='name' AND
-            value {})"_format(sqlOperator(cond.op, cond.value));
+            value {} '{}')"_format(op(cond), value(cond));
 }
 
 static std::string byContact(const Group::Condition& cond)
 {
-    return R"(
+    std::string sql = R"(
         SELECT
             id_asset_element
         FROM
             t_bios_asset_ext_attributes
         WHERE
             (keytag='device.contact' OR keytag='contact_email') AND
-            value {})"_format(sqlOperator(cond.op, cond.value));
+            value {op} '{val}')";
+
+    if (cond.op == Group::ConditionOp::IsNot) {
+        sql = R"(
+                SELECT
+                    id_asset_element
+                FROM
+                    t_bios_asset_element
+                WHERE
+                    id_asset_element NOT IN ()" +
+              sql + ")";
+    }
+    return fmt::format(sql, "op"_a = cond.op != Group::ConditionOp::IsNot ? op(cond) : "=", "val"_a = value(cond));
 }
 
 static std::string byType(const Group::Condition& cond)
@@ -66,7 +87,7 @@ static std::string byType(const Group::Condition& cond)
         LEFT JOIN t_bios_asset_device_type as t
             ON e.id_subtype = t.id_asset_device_type
         WHERE
-            t.name {})"_format(sqlOperator(cond.op, cond.value));
+            t.name {} '{}')"_format(op(cond), value(cond));
 }
 
 static std::string byLocation(tnt::Connection& conn, const Group::Condition& cond)
@@ -78,7 +99,7 @@ static std::string byLocation(tnt::Connection& conn, const Group::Condition& con
             t_bios_asset_element
         WHERE
             id_type={} AND
-            name {})"_format(persist::DATACENTER, sqlOperator(cond.op, cond.value));
+            name {} '{}')"_format(persist::DATACENTER, op(cond), value(cond));
 
     try {
         std::vector<int64_t> ids;
@@ -123,19 +144,71 @@ static std::string byLocation(tnt::Connection& conn, const Group::Condition& con
 
 static std::string byHostName(const Group::Condition& cond)
 {
+    std::string sql = R"(
+        SELECT
+            e.id_asset_element
+        FROM
+            t_bios_asset_element e
+        LEFT JOIN
+            t_bios_asset_ext_attributes a ON e.id_asset_element = a.id_asset_element
+        WHERE
+            a.keytag='hostname.1' AND e.id_type = {type} AND
+            a.value {op} '{val}')";
     if (cond.op == Group::ConditionOp::IsNot) {
-    } else {
-        return R"(
-            SELECT
-                e.id_asset_element
-            FROM
-                t_bios_asset_elements e
-            LEFT JOIN
-                t_bios_asset_ext_attributes a ON e.id_asset_element == a.id_asset_element
-            WHERE
-                a.keytag='hostname.1' AND e.id_type = {} AND
-                value {})"_format(persist::DEVICE, sqlOperator(cond.op, cond.value));
+        sql = R"(
+                SELECT
+                    id_asset_element
+                FROM
+                    t_bios_asset_element
+                WHERE
+                     id_type = {type} AND id_asset_element NOT IN ()" +
+              sql + ")";
     }
+    return fmt::format(sql, "type"_a = persist::DEVICE, "op"_a = cond.op != Group::ConditionOp::IsNot ? op(cond) : "=",
+        "val"_a = value(cond));
+}
+
+static std::string byIpAddress(const Group::Condition& cond)
+{
+    std::string sql = R"(
+        SELECT
+            e.id_asset_element
+        FROM
+            t_bios_asset_element e
+        LEFT JOIN
+            t_bios_asset_ext_attributes a ON e.id_asset_element = a.id_asset_element
+        WHERE
+            a.keytag='ip.1' AND e.id_type = {type} AND
+            {val}
+    )";
+
+    if (cond.op == Group::ConditionOp::IsNot) {
+        sql = R"(
+                SELECT
+                    id_asset_element
+                FROM
+                    t_bios_asset_element
+                WHERE
+                     id_type = {type} AND id_asset_element NOT IN ()" +
+              sql + ")";
+    }
+
+    std::vector<std::string> conds;
+    auto                     addresses = fty::split(cond.value, "|");
+    for (const auto& addr : addresses) {
+        if (size_t pos = addr.find("*"); pos != std::string::npos) {
+            std::string pre = addr.substr(0, pos);
+            conds.push_back("a.value LIKE '{}%'"_format(pre));
+        } else {
+            std::string sop = cond.op == Group::ConditionOp::IsNot ? "=" : op(cond);
+            std::string saddr = cond.op == Group::ConditionOp::Contains ? "%" + addr + "%" : addr;
+            conds.push_back(
+                "a.value {} '{}'"_format(sop, saddr));
+        }
+    }
+
+    return fmt::format(sql, "type"_a = persist::DEVICE, "op"_a = cond.op != Group::ConditionOp::IsNot ? op(cond) : "=",
+        "val"_a = fty::implode(conds, " OR "));
 }
 
 static std::string groupSql(tnt::Connection& conn, const Group::Rules& group)
@@ -144,27 +217,28 @@ static std::string groupSql(tnt::Connection& conn, const Group::Rules& group)
     for (const auto& it : group.conditions) {
         if (it.is<Group::Condition>()) {
             const auto& cond = it.get<Group::Condition>();
-            switch(cond.field) {
-            case Group::Fields::Contact:
-                subQueries.push_back(byContact(cond));
-                break;
-            case Group::Fields::HostName:
-                subQueries.push_back(byHostName(cond));
-                break;
-            case Group::Fields::IPAddress:
-                break;
-            case Group::Fields::Location:
-                subQueries.push_back(byLocation(conn, cond));
-                break;
-            case Group::Fields::Name:
-                subQueries.push_back(byName(cond));
-                break;
-            case Group::Fields::Type:
-                subQueries.push_back(byType(cond));
-                break;
-            case Group::Fields::Unknown:
-            default:
-                throw Error("Unsupported field '{}' in condition", cond.field.value());
+            switch (cond.field) {
+                case Group::Fields::Contact:
+                    subQueries.push_back(byContact(cond));
+                    break;
+                case Group::Fields::HostName:
+                    subQueries.push_back(byHostName(cond));
+                    break;
+                case Group::Fields::IPAddress:
+                    subQueries.push_back(byIpAddress(cond));
+                    break;
+                case Group::Fields::Location:
+                    subQueries.push_back(byLocation(conn, cond));
+                    break;
+                case Group::Fields::Name:
+                    subQueries.push_back(byName(cond));
+                    break;
+                case Group::Fields::Type:
+                    subQueries.push_back(byType(cond));
+                    break;
+                case Group::Fields::Unknown:
+                default:
+                    throw Error("Unsupported field '{}' in condition", cond.field.value());
             }
         } else {
             subQueries.push_back(groupSql(conn, it.get<Group::Rules>()));

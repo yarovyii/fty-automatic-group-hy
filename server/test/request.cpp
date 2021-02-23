@@ -3,10 +3,10 @@
 #include "lib/config.h"
 #include "lib/server.h"
 #include "test-utils.h"
+#include "common/logger.h"
 #include <asset/db.h>
 #include <asset/test-db.h>
 #include <catch2/catch.hpp>
-#include "common/logger.h"
 
 
 // =====================================================================================================================
@@ -44,6 +44,23 @@ public:
 
         REQUIRE(info->id > 0);
         id = info->id;
+    }
+
+    void update(fty::MessageBus& bus)
+    {
+        fty::Message msg = message(fty::commands::update::Subject);
+        msg.userData.setString(*pack::json::serialize(*this));
+
+        auto ret = bus.send(fty::Channel, msg);
+        if (!ret) {
+            FAIL(ret.error());
+        }
+        CHECK(ret->meta.status == fty::Message::Status::Ok);
+
+        auto info = ret->userData.decode<fty::commands::update::Out>();
+        if (!info) {
+            FAIL(info.error());
+        }
     }
 
     fty::commands::resolve::Out resolve(fty::MessageBus& bus)
@@ -165,10 +182,10 @@ struct Test
         srv11 = std::make_unique<assets::Server>("srv11", *dc1, "srv11");
         srv21 = std::make_unique<assets::Server>("srv21", *dc1, "srv21");
 
-        srv11->setExtAttributes({
-            {"device.contact", "dim"},
-            {"hostname.1", "localhost"}
-        });
+        srv11->setExtAttributes({{"device.contact", "dim"}, {"hostname.1", "localhost"}});
+        srv21->setExtAttributes({{"contact_email", "dim@eaton.com"}});
+        srv1->setExtAttributes({{"ip.1", "127.0.0.1"}});
+        srv2->setExtAttributes({{"ip.1", "192.168.0.1"}});
     }
 
     ~Test()
@@ -577,36 +594,182 @@ static void testByHostName(fty::MessageBus& bus)
 
         auto& var  = group.rules.conditions.append();
         auto& cond = var.reset<fty::Group::Condition>();
-        cond.value = "server";
+        cond.value = "localhost";
         cond.field = fty::Group::Fields::HostName;
         cond.op    = fty::Group::ConditionOp::IsNot;
 
         group.create(bus);
         auto info = group.resolve(bus);
-        REQUIRE(info.size() == 7);
-        CHECK(info[0].name == "datacenter");
-        CHECK(info[1].name == "datacenter1");
+        REQUIRE(info.size() == 4);
+        CHECK(info[0].name == "srv1");
+        CHECK(info[1].name == "srv2");
+        CHECK(info[2].name == "srv3");
+        CHECK(info[3].name == "srv21");
 
         group.remove(bus);
     }
     // Not exists
-//    {
-//        Group group;
-//        group.name          = "ByType";
-//        group.rules.groupOp = fty::Group::LogicalOp::And;
+    {
+        Group group;
+        group.name          = "ByHostName";
+        group.rules.groupOp = fty::Group::LogicalOp::And;
 
-//        auto& var  = group.rules.conditions.append();
-//        auto& cond = var.reset<fty::Group::Condition>();
-//        cond.value = "wtf";
-//        cond.field = fty::Group::Fields::Type;
-//        cond.op    = fty::Group::ConditionOp::Is;
+        auto& var  = group.rules.conditions.append();
+        auto& cond = var.reset<fty::Group::Condition>();
+        cond.value = "wtf";
+        cond.field = fty::Group::Fields::Type;
+        cond.op    = fty::Group::ConditionOp::Is;
 
-//        group.create(bus);
-//        auto info = group.resolve(bus);
-//        REQUIRE(info.size() == 0);
+        group.create(bus);
+        auto info = group.resolve(bus);
+        REQUIRE(info.size() == 0);
 
-//        group.remove(bus);
-//    }
+        group.remove(bus);
+    }
+}
+
+static void testByContact(fty::MessageBus& bus)
+{
+    Group group;
+    group.name          = "ByContact";
+    group.rules.groupOp = fty::Group::LogicalOp::And;
+
+    {
+        auto& var  = group.rules.conditions.append();
+        auto& cond = var.reset<fty::Group::Condition>();
+        cond.value = "dim";
+        cond.field = fty::Group::Fields::Contact;
+        cond.op    = fty::Group::ConditionOp::Contains;
+    }
+    group.create(bus);
+
+    // Contains operator
+    {
+        auto info = group.resolve(bus);
+        REQUIRE(info.size() == 2);
+        CHECK(info[0].name == "srv11");
+        CHECK(info[1].name == "srv21");
+    }
+    // Is operator
+    {
+        auto& cond = group.rules.conditions[0].get<fty::Group::Condition>();
+        cond.value = "dim";
+        cond.op    = fty::Group::ConditionOp::Is;
+        group.update(bus);
+
+        auto info = group.resolve(bus);
+        REQUIRE(info.size() == 1);
+        CHECK(info[0].name == "srv11");
+    }
+    // IsNot operator
+    {
+        auto& cond = group.rules.conditions[0].get<fty::Group::Condition>();
+        cond.value = "dim";
+        cond.op    = fty::Group::ConditionOp::IsNot;
+        group.update(bus);
+
+        auto info = group.resolve(bus);
+        REQUIRE(info.size() == 6);
+        CHECK(info[0].name == "datacenter");
+        CHECK(info[1].name == "srv1");
+        CHECK(info[2].name == "srv2");
+        CHECK(info[3].name == "srv3");
+        CHECK(info[4].name == "datacenter1");
+        CHECK(info[5].name == "srv21");
+    }
+    // Not exists
+    {
+        auto& cond = group.rules.conditions[0].get<fty::Group::Condition>();
+        cond.value = "wtf";
+        cond.op    = fty::Group::ConditionOp::Is;
+        group.update(bus);
+
+        auto info = group.resolve(bus);
+        REQUIRE(info.size() == 0);
+    }
+    group.remove(bus);
+}
+
+static void testByIpAddress(fty::MessageBus& bus)
+{
+    Group group;
+    group.name          = "IpAddress";
+    group.rules.groupOp = fty::Group::LogicalOp::And;
+
+    {
+        auto& var  = group.rules.conditions.append();
+        auto& cond = var.reset<fty::Group::Condition>();
+        cond.value = "127.0";
+        cond.field = fty::Group::Fields::IPAddress;
+        cond.op    = fty::Group::ConditionOp::Contains;
+    }
+    group.create(bus);
+
+    // Contains operator
+    {
+        auto info = group.resolve(bus);
+        REQUIRE(info.size() == 1);
+        CHECK(info[0].name == "srv1");
+    }
+    // Is operator
+    {
+        auto& cond = group.rules.conditions[0].get<fty::Group::Condition>();
+        cond.value = "127.0.0.1";
+        cond.op    = fty::Group::ConditionOp::Is;
+        group.update(bus);
+
+        auto info = group.resolve(bus);
+        REQUIRE(info.size() == 1);
+        CHECK(info[0].name == "srv1");
+    }
+    // Is operator
+    {
+        auto& cond = group.rules.conditions[0].get<fty::Group::Condition>();
+        cond.value = "127.0.*";
+        cond.op    = fty::Group::ConditionOp::Is;
+        group.update(bus);
+
+        auto info = group.resolve(bus);
+        REQUIRE(info.size() == 1);
+        CHECK(info[0].name == "srv1");
+    }
+    // Is operator
+    {
+        auto& cond = group.rules.conditions[0].get<fty::Group::Condition>();
+        cond.value = "127.0.*|192.168.*";
+        cond.op    = fty::Group::ConditionOp::Is;
+        group.update(bus);
+
+        auto info = group.resolve(bus);
+        REQUIRE(info.size() == 2);
+        CHECK(info[0].name == "srv1");
+        CHECK(info[1].name == "srv2");
+    }
+    // IsNot operator
+    {
+        auto& cond = group.rules.conditions[0].get<fty::Group::Condition>();
+        cond.value = "127.0.0.1";
+        cond.op    = fty::Group::ConditionOp::IsNot;
+        group.update(bus);
+
+        auto info = group.resolve(bus);
+        REQUIRE(info.size() == 4);
+        CHECK(info[0].name == "srv2");
+        CHECK(info[1].name == "srv3");
+        CHECK(info[2].name == "srv11");
+        CHECK(info[3].name == "srv21");
+    }
+    // Not exists
+    {
+        auto& cond = group.rules.conditions[0].get<fty::Group::Condition>();
+        cond.value = "wtf";
+        cond.op    = fty::Group::ConditionOp::Is;
+        group.update(bus);
+
+        auto info = group.resolve(bus);
+        REQUIRE(info.size() == 0);
+    }
+    group.remove(bus);
 }
 
 // =====================================================================================================================
@@ -624,5 +787,6 @@ TEST_CASE("Server request")
     testByLocation(test->bus);
     testByType(test->bus);
     testByHostName(test->bus);
+    testByContact(test->bus);
+    testByIpAddress(test->bus);
 }
-
