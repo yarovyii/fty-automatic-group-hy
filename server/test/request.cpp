@@ -165,7 +165,10 @@ struct Test
         srv11 = std::make_unique<assets::Server>("srv11", *dc1, "srv11");
         srv21 = std::make_unique<assets::Server>("srv21", *dc1, "srv21");
 
-        srv11->setExtAttributes({{"device.contact", "dim"}});
+        srv11->setExtAttributes({
+            {"device.contact", "dim"},
+            {"hostname.1", "localhost"}
+        });
     }
 
     ~Test()
@@ -526,6 +529,86 @@ static void testByType(fty::MessageBus& bus)
     }
 }
 
+static void testByHostName(fty::MessageBus& bus)
+{
+    // Contains operator
+    {
+        Group group;
+        group.name          = "ByHostName";
+        group.rules.groupOp = fty::Group::LogicalOp::And;
+
+        auto& var  = group.rules.conditions.append();
+        auto& cond = var.reset<fty::Group::Condition>();
+        cond.value = "local";
+        cond.field = fty::Group::Fields::HostName;
+        cond.op    = fty::Group::ConditionOp::Contains;
+
+        group.create(bus);
+        auto info = group.resolve(bus);
+        REQUIRE(info.size() == 1);
+        CHECK(info[0].name == "srv11");
+
+        group.remove(bus);
+    }
+    // Is operator
+    {
+        Group group;
+        group.name          = "ByHostName";
+        group.rules.groupOp = fty::Group::LogicalOp::And;
+
+        auto& var  = group.rules.conditions.append();
+        auto& cond = var.reset<fty::Group::Condition>();
+        cond.value = "localhost";
+        cond.field = fty::Group::Fields::HostName;
+        cond.op    = fty::Group::ConditionOp::Is;
+
+        group.create(bus);
+        auto info = group.resolve(bus);
+        REQUIRE(info.size() == 1);
+        CHECK(info[0].name == "srv11");
+
+        group.remove(bus);
+    }
+    // IsNot operator
+    {
+        Group group;
+        group.name          = "ByHostName";
+        group.rules.groupOp = fty::Group::LogicalOp::And;
+
+        auto& var  = group.rules.conditions.append();
+        auto& cond = var.reset<fty::Group::Condition>();
+        cond.value = "server";
+        cond.field = fty::Group::Fields::HostName;
+        cond.op    = fty::Group::ConditionOp::IsNot;
+
+        group.create(bus);
+        auto info = group.resolve(bus);
+        REQUIRE(info.size() == 7);
+        CHECK(info[0].name == "datacenter");
+        CHECK(info[1].name == "datacenter1");
+
+        group.remove(bus);
+    }
+    // Not exists
+//    {
+//        Group group;
+//        group.name          = "ByType";
+//        group.rules.groupOp = fty::Group::LogicalOp::And;
+
+//        auto& var  = group.rules.conditions.append();
+//        auto& cond = var.reset<fty::Group::Condition>();
+//        cond.value = "wtf";
+//        cond.field = fty::Group::Fields::Type;
+//        cond.op    = fty::Group::ConditionOp::Is;
+
+//        group.create(bus);
+//        auto info = group.resolve(bus);
+//        REQUIRE(info.size() == 0);
+
+//        group.remove(bus);
+//    }
+}
+
 // =====================================================================================================================
 
 TEST_CASE("Server request")
@@ -540,5 +623,6 @@ TEST_CASE("Server request")
     testByName(test->bus);
     testByLocation(test->bus);
     testByType(test->bus);
+    testByHostName(test->bus);
 }
 

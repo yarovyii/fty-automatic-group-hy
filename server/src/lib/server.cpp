@@ -45,7 +45,7 @@ void Server::reloadConfig()
 
 void Server::process(const Message& msg)
 {
-    logDebug("Discovery: got message {}", msg.dump());
+    logDebug("Automatic group: got message {}, payload:\n   {}", msg.meta.subject.value(), msg.userData.asString());
     if (msg.meta.subject == commands::create::Subject) {
         m_pool.pushWorker<job::Create>(msg, m_bus);
     } else if (msg.meta.subject == commands::update::Subject) {

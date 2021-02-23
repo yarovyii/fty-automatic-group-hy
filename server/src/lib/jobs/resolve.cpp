@@ -121,6 +121,23 @@ static std::string byLocation(tnt::Connection& conn, const Group::Condition& con
     }
 }
 
+static std::string byHostName(const Group::Condition& cond)
+{
+    if (cond.op == Group::ConditionOp::IsNot) {
+    } else {
+        return R"(
+            SELECT
+                e.id_asset_element
+            FROM
+                t_bios_asset_elements e
+            LEFT JOIN
+                t_bios_asset_ext_attributes a ON e.id_asset_element == a.id_asset_element
+            WHERE
+                a.keytag='hostname.1' AND e.id_type = {} AND
+                value {})"_format(persist::DEVICE, sqlOperator(cond.op, cond.value));
+    }
+}
+
 static std::string groupSql(tnt::Connection& conn, const Group::Rules& group)
 {
     std::vector<std::string> subQueries;
@@ -132,6 +149,7 @@ static std::string groupSql(tnt::Connection& conn, const Group::Rules& group)
                 subQueries.push_back(byContact(cond));
                 break;
             case Group::Fields::HostName:
+                subQueries.push_back(byHostName(cond));
                 break;
             case Group::Fields::IPAddress:
                 break;
@@ -166,7 +184,7 @@ static std::string groupSql(tnt::Connection& conn, const Group::Rules& group)
         ORDER BY id
     )"_format(fty::implode(subQueries, ") " + sqlLogicalOperator(group.groupOp) + " id_asset_element IN ("));
 
-    //std::cerr << sql << std::endl;
+    std::cerr << sql << std::endl;
     return sql;
 }
 
