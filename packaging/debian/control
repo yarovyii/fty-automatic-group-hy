@@ -5,6 +5,8 @@ Build-Depends:
     debhelper (>= 9),
     fty-cmake-dev,
     libfty-utils-dev,
+    libfty-common-dev,
+    libfty-common-dto-dev,
     libfty-common-logging-dev,
     libfty-pack-dev,
     libfty-common-messagebus-dev,
@@ -14,7 +16,8 @@ Build-Depends:
     libfty-asset-dev,
     libfty-common-dev,
     libfty-common-mlm-dev,
-    libcxxtools-dev
+    libcxxtools-dev,
+    libprotobuf-dev
 Standards-Version: 1.0.0
 Section: devel
 Priority: extra
