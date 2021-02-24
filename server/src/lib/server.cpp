@@ -1,13 +1,14 @@
 #include "server.h"
-#include "daemon.h"
-#include "config.h"
 #include "common/logger.h"
+#include "common/message-bus.h"
+#include "config.h"
+#include "daemon.h"
 #include "jobs/create.h"
-#include "jobs/update.h"
-#include "jobs/remove.h"
 #include "jobs/list.h"
 #include "jobs/read.h"
+#include "jobs/remove.h"
 #include "jobs/resolve.h"
+#include "jobs/update.h"
 #include <asset/db.h>
 
 namespace fty {
@@ -23,6 +24,12 @@ Expected<void> Server::run()
 
     if (auto sub = m_bus.subsribe(fty::Channel, &Server::process, this); !sub) {
         return unexpected(sub.error());
+    }
+
+    m_srrHandlerPtr = std::make_shared<job::srr::SrrHandler>(Config::instance().actorName + std::string("-srr"));
+
+    if(auto srr = m_srrHandlerPtr->run(); !srr){
+        return unexpected(srr.error());
     }
 
     return {};
@@ -45,7 +52,7 @@ void Server::reloadConfig()
 
 void Server::process(const Message& msg)
 {
-    logDebug("Automatic group: got message {}, payload:\n   {}", msg.meta.subject.value(), msg.userData.asString());
+    logDebug("Automatic group: got message {}", msg.dump());
     if (msg.meta.subject == commands::create::Subject) {
         m_pool.pushWorker<job::Create>(msg, m_bus);
     } else if (msg.meta.subject == commands::update::Subject) {

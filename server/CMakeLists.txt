@@ -26,12 +26,16 @@ etn_target(static ${PROJECT_NAME}-static
         src/lib/jobs/read.cpp
         src/lib/jobs/resolve.h
         src/lib/jobs/resolve.cpp
+        src/lib/jobs/srr.h
+        src/lib/jobs/srr.cpp
     INCLUDE_DIRS
         src
     USES
         ${PROJECT_NAME}-common
         pthread
         fty-asset-libng
+        fty_common_dto
+        
         stdc++fs
     PRIVATE
 )
