@@ -31,8 +31,7 @@ Expected<void> SrrHandler::run()
 
     m_busName = m_clientName + "-bus";
 
-    fty::MessageBus bus;
-    if (auto res = bus.init(m_busName); !res) {
+    if (auto res = m_bus.init(m_busName); !res) {
         return unexpected(res.error());
     }
 
