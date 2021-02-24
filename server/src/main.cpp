@@ -12,7 +12,7 @@ int main(int argc, char** argv)
     bool        help   = false;
 
     // clang-format off
-    fty::CommandLine cmd("New discovery service", {
+    fty::CommandLine cmd("Automatic group service", {
         {"--config", config, "Configuration file"},
         {"--daemon", daemon, "Daemonize this application"},
         {"--help",   help,   "Show this help"}
@@ -39,7 +39,7 @@ int main(int argc, char** argv)
     ManageFtyLog::setInstanceFtylog(fty::Config::instance().actorName, fty::Config::instance().logger);
 
     if (daemon) {
-        logDebug("Start discovery agent as daemon");
+        logDebug("Start automatic group agent as daemon");
         fty::Daemon::daemonize();
     }
 
