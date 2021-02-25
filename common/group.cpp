@@ -6,12 +6,14 @@ std::ostream& operator<<(std::ostream& ss, fty::Group::ConditionOp value)
 {
     ss << [&]() {
         switch (value) {
-        case fty::Group::ConditionOp::Contains:
-            return "CONTAINS";
-        case fty::Group::ConditionOp::Is:
-            return "IS";
-        case fty::Group::ConditionOp::IsNot:
-            return "ISNOT";
+            case fty::Group::ConditionOp::Contains:
+                return "CONTAINS";
+            case fty::Group::ConditionOp::Is:
+                return "IS";
+            case fty::Group::ConditionOp::IsNot:
+                return "ISNOT";
+            case fty::Group::ConditionOp::Unknown:
+                return "UNKNOWN";
         }
         return "Unknown";
     }();
@@ -28,6 +30,8 @@ std::istream& operator>>(std::istream& ss, fty::Group::ConditionOp& value)
         value = fty::Group::ConditionOp::Is;
     } else if (strval == "ISNOT") {
         value = fty::Group::ConditionOp::IsNot;
+    } else {
+        value = fty::Group::ConditionOp::Unknown;
     }
     return ss;
 }
@@ -36,10 +40,12 @@ std::ostream& operator<<(std::ostream& ss, fty::Group::LogicalOp value)
 {
     ss << [&]() {
         switch (value) {
-        case fty::Group::LogicalOp::And:
-            return "AND";
-        case fty::Group::LogicalOp::Or:
-            return "OR";
+            case fty::Group::LogicalOp::And:
+                return "AND";
+            case fty::Group::LogicalOp::Or:
+                return "OR";
+            case fty::Group::LogicalOp::Unknown:
+                return "Unknown";
         }
         return "n";
     }();
@@ -54,6 +60,8 @@ std::istream& operator>>(std::istream& ss, fty::Group::LogicalOp& value)
         value = fty::Group::LogicalOp::And;
     } else if (strval == "OR") {
         value = fty::Group::LogicalOp::Or;
+    } else {
+        value = fty::Group::LogicalOp::Unknown;
     }
     return ss;
 }
@@ -62,20 +70,20 @@ std::ostream& operator<<(std::ostream& ss, fty::Group::Fields value)
 {
     ss << [&]() {
         switch (value) {
-        case fty::Group::Fields::Contact:
-            return "contact";
-        case fty::Group::Fields::HostName:
-            return "host-name";
-        case fty::Group::Fields::IPAddress:
-            return "ip-address";
-        case fty::Group::Fields::Location:
-            return "location";
-        case fty::Group::Fields::Name:
-            return "name";
-        case fty::Group::Fields::Type:
-            return "type";
-        case fty::Group::Fields::Unknown:
-            return "unknown";
+            case fty::Group::Fields::Contact:
+                return "contact";
+            case fty::Group::Fields::HostName:
+                return "host-name";
+            case fty::Group::Fields::IPAddress:
+                return "ip-address";
+            case fty::Group::Fields::Location:
+                return "location";
+            case fty::Group::Fields::Name:
+                return "name";
+            case fty::Group::Fields::Type:
+                return "type";
+            case fty::Group::Fields::Unknown:
+                return "unknown";
         }
         return "unknown";
     }();
@@ -84,6 +92,7 @@ std::ostream& operator<<(std::ostream& ss, fty::Group::Fields value)
 
 std::istream& operator>>(std::istream& ss, fty::Group::Fields& value)
 {
+    value = fty::Group::Fields::Unknown;
     std::string strval;
     ss >> strval;
     if (strval == "unknown") {
@@ -104,4 +113,53 @@ std::istream& operator>>(std::istream& ss, fty::Group::Fields& value)
     return ss;
 }
 
+static Expected<void, fty::Translate> checkRules(const Group::Rules& rule)
+{
+    if (!rule.conditions.size()) {
+        return unexpected("Any condition is expected"_tr);
+    }
+
+    if (rule.groupOp == Group::LogicalOp::Unknown) {
+        return unexpected("Valid logical operator is expected"_tr);
+    }
+
+    for (const auto& cond : rule.conditions) {
+        if (cond.is<Group::Condition>()) {
+            const auto& val = cond.get<Group::Condition>();
+            if (val.field == Group::Fields::Unknown) {
+                return unexpected("Valid field name is expected"_tr);
+            }
+            if (val.op == Group::ConditionOp::Unknown) {
+                return unexpected("Valid condition operator is expected"_tr);
+            }
+            if (!val.value.hasValue()) {
+                return unexpected("Value of condition is expected"_tr);
+            }
+        } else if (cond.is<Group::Rules>()) {
+            if (auto ret = checkRules(cond.get<Group::Rules>()); !ret) {
+                return unexpected(ret.error());
+            }
+        }
+    }
+
+    return {};
 }
+
+Expected<void, fty::Translate> Group::check() const
+{
+    if (!hasValue()) {
+        return unexpected("Group is empty"_tr);
+    }
+
+    if (!name.hasValue()) {
+        return unexpected("Name expected"_tr);
+    }
+
+    if (auto ret = checkRules(rules); !ret) {
+        return unexpected(ret.error());
+    }
+
+    return {};
+}
+
+} // namespace fty

@@ -75,9 +75,13 @@ if (BUILD_TESTING)
     etn_test(${PROJECT_NAME}-test
         SOURCES
             test/main.cpp
-            test/db.cpp
+            test/storage.cpp
             test/request.cpp
-            test/test-utils.h
+            test/list.cpp
+            test/create.cpp
+
+            test/db.cpp
+            test/db.h
         CONFIGS
             test/conf/agroup.conf
             test/conf/logger.conf

@@ -1,8 +1,8 @@
+#if 0
 #include "common/commands.h"
 #include "common/message-bus.h"
 #include "lib/config.h"
 #include "lib/server.h"
-#include "test-utils.h"
 #include "common/logger.h"
 #include <asset/db.h>
 #include <asset/test-db.h>
@@ -790,3 +790,4 @@ TEST_CASE("Server request")
     testByContact(test->bus);
     testByIpAddress(test->bus);
 }
+#endif

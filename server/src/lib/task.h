@@ -124,6 +124,10 @@ public:
     {
     }
 
+    Task()
+    {
+    }
+
     void operator()() override
     {
         Response<ResponseT> response;
@@ -169,18 +173,20 @@ public:
     template <typename Payload>
     void notify(const std::string& subject, const Payload& payload)
     {
-        Response<Payload> msg;
-        msg.subject = subject;
-        msg.out     = payload;
+        if (m_bus) {
+            Response<Payload> msg;
+            msg.subject = subject;
+            msg.out     = payload;
 
-        if (auto ret = m_bus->publish(fty::Events, msg); !ret) {
-            logError(ret.error());
+            if (auto ret = m_bus->publish(fty::Events, msg); !ret) {
+                logError(ret.error());
+            }
         }
     }
 
 protected:
     Message     m_in;
-    MessageBus* m_bus;
+    MessageBus* m_bus = nullptr;
 };
 
 } // namespace fty::job

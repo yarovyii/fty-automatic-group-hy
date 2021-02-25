@@ -1,5 +1,6 @@
 #pragma once
 #include <pack/pack.h>
+#include <fty/translate.h>
 
 namespace fty {
 
@@ -7,12 +8,14 @@ struct Group : public pack::Node
 {
     enum class LogicalOp
     {
+        Unknown,
         Or,
         And
     };
 
     enum class ConditionOp
     {
+        Unknown,
         Contains,
         Is,
         IsNot
@@ -54,6 +57,8 @@ struct Group : public pack::Node
 
     using pack::Node::Node;
     META(Group, id, name, rules);
+
+    Expected<void, fty::Translate> check() const;
 };
 
 std::ostream& operator<<(std::ostream& ss, fty::Group::ConditionOp value);

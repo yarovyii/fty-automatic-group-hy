@@ -17,6 +17,8 @@ static std::string op(const Group::Condition& cond)
             return "=";
         case Group::ConditionOp::IsNot:
             return "<>";
+        case Group::ConditionOp::Unknown:
+            return "unknown";
     }
     return "unknown";
 }
@@ -37,6 +39,8 @@ static std::string sqlLogicalOperator(const Group::LogicalOp& op)
             return "AND";
         case Group::LogicalOp::Or:
             return "OR";
+        case Group::LogicalOp::Unknown:
+            return "unknown";
     }
     return "unknown";
 }
