@@ -7,6 +7,7 @@ etn_target(static ${PROJECT_NAME}-common
         common/commands.h
         common/group.h
         common/logger.h
+        common/srr.h
 
         message-bus.cpp
         message.cpp
@@ -14,9 +15,7 @@ etn_target(static ${PROJECT_NAME}-common
     USES
         fty-utils
         fty-pack
-        fty_common
         fty_common_logging
         fty_common_messagebus
-        protobuf
     PRIVATE
 )

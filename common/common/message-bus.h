@@ -51,6 +51,7 @@ public:
     [[nodiscard]] Expected<Message> send(const std::string& queue, const Message& msg);
     [[nodiscard]] Expected<void>    publish(const std::string& queue, const Message& msg);
     [[nodiscard]] Expected<void>    reply(const std::string& queue, const Message& req, const Message& answ);
+    [[nodiscard]] Expected<void>    replyLegacy(const std::string& queue, const messagebus::Message& req, messagebus::Message& answ);
     [[nodiscard]] Expected<Message> recieve(const std::string& queue);
 
     template <typename Func, typename Cls>
@@ -58,6 +59,14 @@ public:
     {
         return subsribe(queue, [f = std::move(fnc), c = cls](const messagebus::Message& msg) -> void {
             std::invoke(f, *c, Message(msg));
+        });
+    }
+
+    template <typename Func, typename Cls>
+    [[nodiscard]] Expected<void> subsribeLegacy(const std::string& queue, Func&& fnc, Cls* cls)
+    {
+        return subsribe(queue, [f = std::move(fnc), c = cls](const messagebus::Message& msg) -> void {
+            std::invoke(f, *c, msg);
         });
     }
 

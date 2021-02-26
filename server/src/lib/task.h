@@ -124,9 +124,7 @@ public:
     {
     }
 
-    Task()
-    {
-    }
+    Task() = default;
 
     void operator()() override
     {

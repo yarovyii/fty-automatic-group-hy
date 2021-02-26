@@ -26,8 +26,14 @@ etn_target(static ${PROJECT_NAME}-static
         src/lib/jobs/read.cpp
         src/lib/jobs/resolve.h
         src/lib/jobs/resolve.cpp
-        src/lib/jobs/srr.h
-        src/lib/jobs/srr.cpp
+        src/lib/jobs/srr/utils.h
+        src/lib/jobs/srr/utils.cpp
+        src/lib/jobs/srr/save.h
+        src/lib/jobs/srr/save.cpp
+        src/lib/jobs/srr/restore.h
+        src/lib/jobs/srr/restore.cpp
+        src/lib/jobs/srr/reset.h
+        src/lib/jobs/srr/reset.cpp
     INCLUDE_DIRS
         src
     USES
@@ -35,7 +41,7 @@ etn_target(static ${PROJECT_NAME}-static
         pthread
         fty-asset-libng
         fty_common_dto
-        
+        protobuf
         stdc++fs
     PRIVATE
 )

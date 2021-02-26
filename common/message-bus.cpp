@@ -81,11 +81,27 @@ Expected<void> MessageBus::reply(const std::string& queue, const Message& req, c
     std::lock_guard<std::mutex> lock(m_mutex);
 
     answ.meta.correlationId = req.meta.correlationId;
-    answ.meta.to            = req.meta.from;
-    answ.meta.from          = req.meta.to;
+    answ.meta.to            = req.meta.replyTo;
+    answ.meta.from          = m_actorName;
 
     try {
         m_bus->sendReply(queue, answ.toMessageBus());
+        return {};
+    } catch (messagebus::MessageBusException& ex) {
+        return unexpected(ex.what());
+    }
+}
+
+Expected<void> MessageBus::replyLegacy(const std::string& queue, const messagebus::Message& req, messagebus::Message& answ)
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+
+    answ.metaData().emplace(messagebus::Message::CORRELATION_ID, req.metaData().at(messagebus::Message::CORRELATION_ID));
+    answ.metaData().emplace(messagebus::Message::TO, req.metaData().at(messagebus::Message::REPLY_TO));
+    answ.metaData().emplace(messagebus::Message::FROM, m_actorName);
+
+    try {
+        m_bus->sendReply(queue, answ);
         return {};
     } catch (messagebus::MessageBusException& ex) {
         return unexpected(ex.what());
