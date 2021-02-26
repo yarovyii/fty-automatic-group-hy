@@ -24,7 +24,7 @@ dto::srr::SaveResponse save(const dto::srr::SaveQuery& query)
         if (featureName == common::srr::FeatureName) {
             f1.set_version(common::srr::ActiveVersion);
             try {
-                pack::ObjectList<Group> payload;
+                common::srr::SrrGroupObj payload;
 
                 auto idList = utils::list();
                 if (!idList) {
@@ -39,7 +39,7 @@ dto::srr::SaveResponse save(const dto::srr::SaveQuery& query)
                         throw std::runtime_error(groupInfo.error());
                     }
 
-                    payload.append(*groupInfo);
+                    payload.m_groupList.append(*groupInfo);
                 }
 
                 f1.set_data(*pack::json::serialize(payload));

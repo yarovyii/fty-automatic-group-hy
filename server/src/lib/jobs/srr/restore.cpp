@@ -36,11 +36,11 @@ dto::srr::RestoreResponse restore(const dto::srr::RestoreQuery& query)
                 }
 
                 // get data to restore
-                pack::ObjectList<Group> srrRestoreData;
+                common::srr::SrrGroupObj srrRestoreData;
                 pack::json::deserialize(feature.data(), srrRestoreData);
 
                 // restore groups
-                for (auto& group : srrRestoreData) {
+                for (auto& group : srrRestoreData.m_groupList) {
                     logDebug("Restoring group {}", group.name.value());
                     // group must have no ID at insertion
                     group.id.clear();
