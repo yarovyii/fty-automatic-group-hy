@@ -1,5 +1,6 @@
 #include <catch2/catch.hpp>
 #include "lib/jobs/create.h"
+#include "lib/storage.h"
 
 #include "db.h"
 
@@ -200,4 +201,6 @@ TEST_CASE("Create")
         fty::Group created;
         REQUIRE_THROWS_WITH(create.run(group, created), "Value of condition is expected");
     }
+
+    CHECK(fty::Storage::clear());
 }

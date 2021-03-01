@@ -23,12 +23,6 @@ namespace commands::update {
 namespace commands::remove {
     static constexpr const char* Subject = "DELETE";
 
-    struct Answer : public pack::Node
-    {
-        pack::UInt64 id;
-        pack::String status;
-    };
-
     using In  = pack::UInt64List;
     using Out = pack::ObjectList<pack::StringMap>;
 } // namespace commands::remove

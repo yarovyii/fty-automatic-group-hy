@@ -3,13 +3,13 @@
 #include <fty/translate.h>
 #include <fty_log.h>
 
-#define logError(...) log(log4cplus::ERROR_LOG_LEVEL, __VA_ARGS__)
-#define logDebug(...) log(log4cplus::DEBUG_LOG_LEVEL, __VA_ARGS__)
-#define logInfo(...)  log(log4cplus::INFO_LOG_LEVEL, __VA_ARGS__)
-#define logWarn(...)  log(log4cplus::WARN_LOG_LEVEL, __VA_ARGS__)
-#define logFatal(...) log(log4cplus::FATAL_LOG_LEVEL, __VA_ARGS__)
+#define logError(...) _log(log4cplus::ERROR_LOG_LEVEL, __VA_ARGS__)
+#define logDebug(...) _log(log4cplus::DEBUG_LOG_LEVEL, __VA_ARGS__)
+#define logInfo(...)  _log(log4cplus::INFO_LOG_LEVEL, __VA_ARGS__)
+#define logWarn(...)  _log(log4cplus::WARN_LOG_LEVEL, __VA_ARGS__)
+#define logFatal(...) _log(log4cplus::FATAL_LOG_LEVEL, __VA_ARGS__)
 
-#define log(level, ...)                                                                                                \
+#define _log(level, ...)                                                                                               \
     ftylog_getInstance()->insertLog(level, __FILE__, __LINE__, __func__, fty::logger::format(__VA_ARGS__).c_str())
 
 namespace fty::logger {

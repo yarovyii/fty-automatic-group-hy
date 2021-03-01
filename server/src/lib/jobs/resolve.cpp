@@ -255,14 +255,11 @@ static std::string groupSql(tnt::Connection& conn, const Group::Rules& group)
 
     std::string sql = R"(
         SELECT
-            id_asset_element as id,
-            name
+            id_asset_element as id
         FROM t_bios_asset_element
         WHERE id_asset_element IN ({})
-        ORDER BY id
     )"_format(fty::implode(subQueries, ") " + sqlLogicalOperator(group.groupOp) + " id_asset_element IN ("));
 
-    std::cerr << sql << std::endl;
     return sql;
 }
 
@@ -280,7 +277,18 @@ void Resolve::run(const commands::resolve::In& in, commands::resolve::Out& asset
     // Normal connection, continue my sad work with db
     tnt::Connection conn;
 
-    std::string sql = groupSql(conn, group->rules);
+    std::string groups = groupSql(conn, group->rules);
+
+    std::string sql = R"(
+        SELECT
+            id_asset_element as id,
+            name
+        FROM t_bios_asset_element
+        WHERE id_asset_element IN ({})
+        ORDER BY id
+    )"_format(groups);
+
+    //std::cerr << sql << std::endl;
 
     try {
         for (const auto& row : conn.select(sql)) {

@@ -76,9 +76,10 @@ if (BUILD_TESTING)
         SOURCES
             test/main.cpp
             test/storage.cpp
-            test/request.cpp
             test/list.cpp
             test/create.cpp
+            test/read.cpp
+            test/resolve.cpp
 
             test/db.cpp
             test/db.h

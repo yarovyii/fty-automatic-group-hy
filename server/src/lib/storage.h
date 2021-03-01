@@ -21,6 +21,7 @@ public:
     static Expected<Group> save(const Group& group);
     static Expected<void>  remove(uint64_t id);
     static Expected<void>  removeByName(const std::string& groupName);
+    static Expected<void>  clear();
 
 private:
     class Impl;

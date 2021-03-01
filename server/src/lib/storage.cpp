@@ -1,8 +1,8 @@
 #include "storage.h"
 #include "config.h"
+#include <filesystem>
 #include <iostream>
 #include <mutex>
-#include <filesystem>
 
 namespace fty {
 
@@ -35,7 +35,6 @@ public:
         std::filesystem::path path(m_dbpath);
         std::filesystem::create_directories(path.parent_path());
 
-        std::cerr << "load " << m_dbpath << std::endl;
         if (auto ret = pack::yaml::deserializeFile(m_dbpath, db); !ret) {
             return unexpected(ret.error());
         }
@@ -46,6 +45,18 @@ public:
     {
         if (auto ret = pack::yaml::serializeFile(m_dbpath, db); !ret) {
             return unexpected(ret.error());
+        }
+        return {};
+    }
+
+    Expected<void> clear()
+    {
+        m_inited = false;
+        db.clear();
+        try {
+            std::filesystem::remove(m_dbpath);
+        } catch (const std::exception& e) {
+            return unexpected(e.what());
         }
         return {};
     }
@@ -223,6 +234,17 @@ Expected<void> Storage::remove(uint64_t id)
     }
 
     return {};
+}
+
+Expected<void> Storage::clear()
+{
+    auto&                       db = instance();
+    std::lock_guard<std::mutex> guard(db.m_impl->mutex);
+
+    if (!db.m_impl->inited()) {
+        db.m_impl->init();
+    }
+    return db.m_impl->clear();
 }
 
 

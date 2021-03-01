@@ -54,4 +54,5 @@ TEST_CASE("Storage")
     }
 
     fty::Storage::remove(ins->id);
+    CHECK(fty::Storage::clear());
 }

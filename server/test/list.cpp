@@ -2,6 +2,7 @@
 #include "lib/jobs/list.h"
 #include "lib/jobs/create.h"
 #include "db.h"
+#include "lib/storage.h"
 
 
 TEST_CASE("List")
@@ -37,4 +38,6 @@ TEST_CASE("List")
     CHECK(out.size() == 1);
     CHECK(out[0].id == created.id);
     CHECK(out[0].name == created.name);
+
+    CHECK(fty::Storage::clear());
 }
