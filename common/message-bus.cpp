@@ -108,7 +108,7 @@ Expected<void> MessageBus::replyLegacy(const std::string& queue, const messagebu
     }
 }
 
-Expected<Message> MessageBus::recieve(const std::string& queue)
+Expected<Message> MessageBus::receive(const std::string& queue)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
     Message                     ret;
@@ -122,7 +122,7 @@ Expected<Message> MessageBus::recieve(const std::string& queue)
     }
 }
 
-Expected<void> MessageBus::subsribe(const std::string& queue, std::function<void(const messagebus::Message&)>&& func)
+Expected<void> MessageBus::subscribe(const std::string& queue, std::function<void(const messagebus::Message&)>&& func)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
     try {

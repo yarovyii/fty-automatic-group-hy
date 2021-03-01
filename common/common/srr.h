@@ -12,9 +12,9 @@ static constexpr const char* ActiveVersion = "1.0";
 
 struct SrrGroupObj : public pack::Node
 {
-    pack::ObjectList<Group> m_groupList = FIELD("groupList");
+    pack::ObjectList<Group> groupList = FIELD("groupList");
     using pack::Node::Node;
-    META(SrrGroupObj, m_groupList);
+    META(SrrGroupObj, groupList);
 };
 
 } // namespace fty::common::srr

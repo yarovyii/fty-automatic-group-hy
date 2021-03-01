@@ -28,7 +28,7 @@ Expected<void> Server::run()
         return unexpected(res.error());
     }
 
-    if (auto sub = m_bus.subsribe(Channel, &Server::process, this); !sub) {
+    if (auto sub = m_bus.subscribe(Channel, &Server::process, this); !sub) {
         return unexpected(sub.error());
     }
 
@@ -36,7 +36,7 @@ Expected<void> Server::run()
     m_srrProcessor.restoreHandler = std::bind(&job::srr::restore, std::placeholders::_1);
     m_srrProcessor.resetHandler   = std::bind(&job::srr::reset, std::placeholders::_1);
 
-    if (auto sub = m_bus.subsribeLegacy(common::srr::Channel, &Server::srrProcess, this); !sub) {
+    if (auto sub = m_bus.subscribeLegacy(common::srr::Channel, &Server::srrProcess, this); !sub) {
         return unexpected(sub.error());
     }
 
@@ -92,7 +92,7 @@ void Server::srrProcess(const messagebus::Message& msg)
         messagebus::UserData         respData;
         std::unique_lock<std::mutex> lock(m_srrLock);
         respData << (m_srrProcessor.processQuery(query));
-
+        lock.unlock();
         const auto subject = msg.metaData().at(messagebus::Message::SUBJECT);
         const auto replyTo = msg.metaData().at(messagebus::Message::REPLY_TO);
 

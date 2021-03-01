@@ -39,7 +39,7 @@ dto::srr::SaveResponse save(const dto::srr::SaveQuery& query)
                         throw std::runtime_error(groupInfo.error());
                     }
 
-                    payload.m_groupList.append(*groupInfo);
+                    payload.groupList.append(*groupInfo);
                 }
 
                 f1.set_data(*pack::json::serialize(payload));
