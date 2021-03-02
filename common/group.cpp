@@ -80,6 +80,8 @@ std::ostream& operator<<(std::ostream& ss, fty::Group::Fields value)
                 return "location";
             case fty::Group::Fields::Name:
                 return "name";
+            case fty::Group::Fields::SubType:
+                return "subtype";
             case fty::Group::Fields::Type:
                 return "type";
             case fty::Group::Fields::Unknown:
@@ -109,6 +111,8 @@ std::istream& operator>>(std::istream& ss, fty::Group::Fields& value)
         value = fty::Group::Fields::Name;
     } else if (strval == "type") {
         value = fty::Group::Fields::Type;
+    } else if (strval == "subtype") {
+        value = fty::Group::Fields::SubType;
     }
     return ss;
 }

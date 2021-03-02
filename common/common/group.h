@@ -27,6 +27,7 @@ struct Group : public pack::Node
         Name,
         Location,
         Type,
+        SubType,
         Contact,
         HostName,
         IPAddress,

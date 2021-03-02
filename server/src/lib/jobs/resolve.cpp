@@ -88,6 +88,19 @@ static std::string byType(const Group::Condition& cond)
             e.id_asset_element
         FROM
             t_bios_asset_element as e
+        LEFT JOIN t_bios_asset_element_type as t
+            ON e.id_type = t.id_asset_element_type
+        WHERE
+            t.name {} '{}')"_format(op(cond), value(cond));
+}
+
+static std::string bySubType(const Group::Condition& cond)
+{
+    return R"(
+        SELECT
+            e.id_asset_element
+        FROM
+            t_bios_asset_element as e
         LEFT JOIN t_bios_asset_device_type as t
             ON e.id_subtype = t.id_asset_device_type
         WHERE
@@ -239,6 +252,9 @@ static std::string groupSql(tnt::Connection& conn, const Group::Rules& group)
                     break;
                 case Group::Fields::Type:
                     subQueries.push_back(byType(cond));
+                    break;
+                case Group::Fields::SubType:
+                    subQueries.push_back(bySubType(cond));
                     break;
                 case Group::Fields::Unknown:
                 default:

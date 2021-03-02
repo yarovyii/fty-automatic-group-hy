@@ -210,6 +210,77 @@ TEST_CASE("Resolve by type")
 
     SECTION("Contains")
     {
+        cond.value = "device";
+        cond.op    = fty::Group::ConditionOp::Contains;
+
+        auto g = group.create();
+        auto info = g.resolve();
+
+        REQUIRE(info.size() == 5);
+        CHECK(info[0].name == "srv1");
+        CHECK(info[1].name == "srv2");
+        CHECK(info[2].name == "srv3");
+        CHECK(info[3].name == "srv11");
+        CHECK(info[4].name == "srv21");
+    }
+
+    SECTION("Is")
+    {
+        cond.value = "device";
+        cond.op    = fty::Group::ConditionOp::Is;
+
+        auto g = group.create();
+        auto info = g.resolve();
+
+        REQUIRE(info.size() == 5);
+        CHECK(info[0].name == "srv1");
+        CHECK(info[1].name == "srv2");
+        CHECK(info[2].name == "srv3");
+        CHECK(info[3].name == "srv11");
+        CHECK(info[4].name == "srv21");
+    }
+
+    SECTION("IsNot")
+    {
+        cond.value = "device";
+        cond.op    = fty::Group::ConditionOp::IsNot;
+
+        auto g = group.create();
+        auto info = g.resolve();
+
+        REQUIRE(info.size() == 2);
+        CHECK(info[0].name == "datacenter");
+        CHECK(info[1].name == "datacenter1");
+    }
+
+    SECTION("Not exists")
+    {
+        cond.value = "wtf";
+        cond.op    = fty::Group::ConditionOp::Is;
+
+        auto g= group.create();
+        auto info = g.resolve();
+        REQUIRE(info.size() == 0);
+    }
+
+    CHECK(fty::Storage::clear());
+}
+
+
+TEST_CASE("Resolve by subtype")
+{
+    REQUIRE(fty::GroupsDB::init());
+
+    Group group;
+    group.name          = "BySubType";
+    group.rules.groupOp = fty::Group::LogicalOp::And;
+
+    auto& var  = group.rules.conditions.append();
+    auto& cond = var.reset<fty::Group::Condition>();
+    cond.field = fty::Group::Fields::SubType;
+
+    SECTION("Contains")
+    {
         cond.value = "server";
         cond.op    = fty::Group::ConditionOp::Contains;
 
