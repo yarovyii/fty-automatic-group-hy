@@ -21,7 +21,10 @@ dto::srr::ResetResponse reset(const dto::srr::ResetQuery& /* query */)
     FeatureStatus      featureStatus;
 
     try {
-        utils::clear();
+        auto res = utils::clear();
+        for(const auto& d : res) {
+            logDebug("Group: {} - {}", d.first, d.second);
+        }
         featureStatus.set_status(Status::SUCCESS);
     } catch (std::exception& ex) {
         featureStatus.set_status(Status::FAILED);

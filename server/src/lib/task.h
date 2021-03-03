@@ -132,7 +132,7 @@ public:
         try {
             if (auto it = dynamic_cast<T*>(this)) {
                 if constexpr (!std::is_same<InputT, void>::value) {
-                    if (m_in.userData.empty()) {
+                    if (m_in.userData[0].empty()) {
                         throw Error("Wrong input data: payload is empty");
                     }
 

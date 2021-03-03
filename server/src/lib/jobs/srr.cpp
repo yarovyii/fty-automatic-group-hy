@@ -16,7 +16,7 @@ void SrrProcess::run()
     using namespace dto::srr;
 
     if(!m_bus) {
-        throw Error("No messagebus instance available");
+        logError("No messagebus instance available");
     }
 
     dto::srr::SrrQueryProcessor srrProcessor;
@@ -25,7 +25,12 @@ void SrrProcess::run()
     srrProcessor.restoreHandler = std::bind(&job::srr::restore, std::placeholders::_1);
     srrProcessor.resetHandler   = std::bind(&job::srr::reset, std::placeholders::_1);
 
-    logDebug("Handle SRR message");
+    Message resp;
+    resp.meta.subject = m_in.meta.subject;
+    resp.meta.to      = m_in.meta.replyTo;
+    resp.meta.replyTo = m_in.meta.to;
+
+    logDebug("Processing SRR request: {}", m_in.meta.subject.value());
 
     try {
         // Get request
@@ -41,21 +46,28 @@ void SrrProcess::run()
         const auto subject = m_in.meta.subject;
         const auto replyTo = m_in.meta.replyTo;
 
-        Message resp;
-        resp.meta.subject = m_in.meta.subject;
-        resp.meta.to      = m_in.meta.replyTo;
         for(const auto& el : respData) {
             resp.userData.append(el);
         }
 
+        resp.meta.status = Message::Status::Ok;
+
         if (auto ans = m_bus->reply(replyTo, m_in, resp); !ans) {
-            throw std::runtime_error("Sending reply failed");
+            throw Error("Sending reply failed");
         }
-    } catch (std::exception& e) {
-        logError("Unexpected error {}", e.what());
-    } catch (...) {
-        logError("Unexpected error: unknown");
-    }
+    } catch (const Error& err) {
+            logError("Error: {}", err.what());
+            resp.meta.status = Message::Status::Error;
+            resp.userData.append(err.what());
+            if (auto res = m_bus->reply(fty::Channel, m_in, resp); !res) {
+                logError(res.error());
+            }
+        }
+}
+
+void SrrProcess::operator()()
+{
+    run();
 }
 
 }

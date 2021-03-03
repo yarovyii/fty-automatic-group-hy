@@ -71,6 +71,7 @@ void Server::process(const Message& msg)
 
 void Server::srrProcess(const Message& msg)
 {
+    logDebug("Automatic group: got SRR request {}", msg.dump());
     m_pool.pushWorker<job::SrrProcess>(msg, m_bus);
 }
 

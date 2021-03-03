@@ -32,12 +32,13 @@ dto::srr::SaveResponse save(const dto::srr::SaveQuery& query)
                 }
 
                 for (const auto& id : *idList) {
-
                     auto groupInfo = utils::read(id);
 
                     if (!groupInfo) {
                         throw std::runtime_error(groupInfo.error());
                     }
+
+                    logDebug("Saving group {}", (*groupInfo).name.value());
 
                     payload.groupList.append(*groupInfo);
                 }
