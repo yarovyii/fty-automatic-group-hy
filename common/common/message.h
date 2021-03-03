@@ -56,9 +56,11 @@ public:
         META(Meta, replyTo, from, to, subject, status, timeout, correlationId);
     };
 
+    using Data = pack::StringList;
+
 public:
-    pack::Binary userData = FIELD("user-data");
-    Meta         meta     = FIELD("meta-data");
+    Meta meta     = FIELD("meta-data");
+    Data userData = FIELD("user-data");
 
 public:
     using pack::Node::Node;

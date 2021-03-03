@@ -66,18 +66,18 @@ public:
 
         if (status == Message::Status::Ok) {
             if (out.hasValue()) {
-                msg.userData.setString(*pack::json::serialize(out));
+                msg.userData.append(*pack::json::serialize(out));
             } else {
                 if constexpr (std::is_base_of_v<pack::IList, T>) {
-                    msg.userData.setString("[]");
+                    msg.userData.append("[]");
                 } else if constexpr (std::is_base_of_v<pack::IMap, T> || std::is_base_of_v<pack::INode, T>) {
-                    msg.userData.setString("{}");
+                    msg.userData.append("{}");
                 } else {
-                    msg.userData.setString("");
+                    msg.userData.append("");
                 }
             }
         } else {
-            msg.userData.setString(error);
+            msg.userData.append(error);
         }
         return msg;
     }
@@ -106,7 +106,7 @@ public:
         Message msg;
         msg.meta.status = status;
         if (status != Message::Status::Ok) {
-            msg.userData.setString(error);
+            msg.userData.append(error);
         }
         return msg;
     }
@@ -137,9 +137,8 @@ public:
                     }
 
                     InputT cmd;
-                    if (auto parsedCmd = m_in.userData.decode<InputT>()) {
-                        cmd = *parsedCmd;
-                    } else {
+                    auto ret = pack::json::deserialize(m_in.userData[0], cmd);
+                    if (!ret) {
                         throw Error("Wrong input data: format of payload is incorrect");
                     }
 

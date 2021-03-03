@@ -57,16 +57,14 @@ Message::Message(const messagebus::Message& msg)
 
     meta.status.fromString(value(msg.metaData(), messagebus::Message::STATUS, "ok"));
 
-    if (!msg.userData().empty()) {
-        userData.setString(msg.userData().front());
+    for(const auto& el : msg.userData()) {
+        userData.append(el);
     }
 }
 
 messagebus::Message Message::toMessageBus() const
 {
     messagebus::Message msg;
-
-    msg.userData().emplace_back(userData.asString());
 
     msg.metaData()[messagebus::Message::TO]             = meta.to;
     msg.metaData()[messagebus::Message::FROM]           = meta.from;
@@ -75,6 +73,10 @@ messagebus::Message Message::toMessageBus() const
     msg.metaData()[messagebus::Message::TIMEOUT]        = meta.timeout;
     msg.metaData()[messagebus::Message::CORRELATION_ID] = meta.correlationId;
     msg.metaData()[messagebus::Message::STATUS]         = meta.status.asString();
+
+    for(const auto& el : userData) {
+        msg.userData().emplace_back(el);
+    }
 
     return msg;
 }

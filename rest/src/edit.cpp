@@ -36,11 +36,12 @@ unsigned Edit::run()
     }
 
     auto msg = message(commands::update::Subject);
-    msg.userData.setString(*pack::json::serialize(group));
+    msg.userData.append(*pack::json::serialize(group));
 
     if (auto ret = bus.send(fty::Channel, msg)) {
-        if (auto info = ret->userData.decode<fty::commands::update::Out>()) {
-            m_reply << *pack::json::serialize(*info);
+        commands::update::Out out;
+        if (auto info = pack::json::deserialize(ret->userData[0], out)) {
+            m_reply << *pack::json::serialize(out);
             return HTTP_OK;
         } else {
             throw rest::errors::Internal(info.error());

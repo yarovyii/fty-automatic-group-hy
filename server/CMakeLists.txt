@@ -24,6 +24,8 @@ etn_target(static ${PROJECT_NAME}-static
         src/lib/jobs/list.cpp
         src/lib/jobs/read.h
         src/lib/jobs/read.cpp
+        src/lib/jobs/srr.h
+        src/lib/jobs/srr.cpp
         src/lib/jobs/resolve.h
         src/lib/jobs/resolve.cpp
         src/lib/jobs/srr/utils.h

@@ -56,7 +56,7 @@ Expected<Message> MessageBus::send(const std::string& queue, const Message& msg)
     try {
         Message m(m_bus->request(queue, msg.toMessageBus(), 10000));
         if (m.meta.status == Message::Status::Error) {
-            return unexpected(*m.userData.decode<std::string>());
+            return unexpected(m.userData[0]);
         }
         return Expected<Message>(m);
     } catch (messagebus::MessageBusException& ex) {
@@ -86,22 +86,6 @@ Expected<void> MessageBus::reply(const std::string& queue, const Message& req, c
 
     try {
         m_bus->sendReply(queue, answ.toMessageBus());
-        return {};
-    } catch (messagebus::MessageBusException& ex) {
-        return unexpected(ex.what());
-    }
-}
-
-Expected<void> MessageBus::replyLegacy(const std::string& queue, const messagebus::Message& req, messagebus::Message& answ)
-{
-    std::lock_guard<std::mutex> lock(m_mutex);
-
-    answ.metaData().emplace(messagebus::Message::CORRELATION_ID, req.metaData().at(messagebus::Message::CORRELATION_ID));
-    answ.metaData().emplace(messagebus::Message::TO, req.metaData().at(messagebus::Message::REPLY_TO));
-    answ.metaData().emplace(messagebus::Message::FROM, m_actorName);
-
-    try {
-        m_bus->sendReply(queue, answ);
         return {};
     } catch (messagebus::MessageBusException& ex) {
         return unexpected(ex.what());

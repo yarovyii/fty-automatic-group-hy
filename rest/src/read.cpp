@@ -51,19 +51,21 @@ unsigned Read::run()
     fty::commands::read::In in;
     in.id = fty::convert<uint16_t>(*strIdPrt);
 
-    msg.userData.setString(*pack::json::serialize(in));
+    msg.userData.append(*pack::json::serialize(in));
 
     auto ret = bus.send(fty::Channel, msg);
     if (!ret) {
         throw rest::errors::Internal(ret.error());
     }
 
-    auto info = ret->userData.decode<fty::commands::read::Out>();
+    commands::read::Out out;
+
+    auto info = pack::json::deserialize(ret->userData[0], out);
     if (!info) {
         throw rest::errors::Internal(info.error());
     }
 
-    m_reply << *pack::json::serialize(*info);
+    m_reply << *pack::json::serialize(out);
 
     return HTTP_OK;
 }

@@ -9,13 +9,10 @@
 #include "jobs/read.h"
 #include "jobs/remove.h"
 #include "jobs/resolve.h"
-#include "jobs/srr/reset.h"
-#include "jobs/srr/restore.h"
-#include "jobs/srr/save.h"
+#include "jobs/srr.h"
 #include "jobs/update.h"
 #include <asset/db.h>
 #include <fty_common_messagebus.h>
-#include <fty_srr_dto.h>
 
 namespace fty {
 
@@ -32,11 +29,7 @@ Expected<void> Server::run()
         return unexpected(sub.error());
     }
 
-    m_srrProcessor.saveHandler    = std::bind(&job::srr::save, std::placeholders::_1);
-    m_srrProcessor.restoreHandler = std::bind(&job::srr::restore, std::placeholders::_1);
-    m_srrProcessor.resetHandler   = std::bind(&job::srr::reset, std::placeholders::_1);
-
-    if (auto sub = m_bus.subscribeLegacy(common::srr::Channel, &Server::srrProcess, this); !sub) {
+    if (auto sub = m_bus.subscribe(common::srr::Channel, &Server::srrProcess, this); !sub) {
         return unexpected(sub.error());
     }
 
@@ -76,40 +69,9 @@ void Server::process(const Message& msg)
     }
 }
 
-void Server::srrProcess(const messagebus::Message& msg)
+void Server::srrProcess(const Message& msg)
 {
-    using namespace dto;
-    using namespace dto::srr;
-
-    logDebug("Handle SRR message");
-
-    try {
-        // Get request
-        UserData data = msg.userData();
-        Query    query;
-        data >> query;
-
-        messagebus::UserData         respData;
-        std::unique_lock<std::mutex> lock(m_srrLock);
-        respData << (m_srrProcessor.processQuery(query));
-        lock.unlock();
-        const auto subject = msg.metaData().at(messagebus::Message::SUBJECT);
-        const auto replyTo = msg.metaData().at(messagebus::Message::REPLY_TO);
-
-        messagebus::Message resp;
-        resp.metaData().emplace(messagebus::Message::SUBJECT, subject);
-        resp.metaData().emplace(messagebus::Message::STATUS, messagebus::STATUS_OK);
-
-        resp.userData() = respData;
-
-        if (auto ans = m_bus.replyLegacy(replyTo, msg, resp); !ans) {
-            throw std::runtime_error("Sending reply failed");
-        }
-    } catch (std::exception& e) {
-        logError("Unexpected error {}", e.what());
-    } catch (...) {
-        logError("Unexpected error: unknown");
-    }
+    m_pool.pushWorker<job::SrrProcess>(msg, m_bus);
 }
 
 void Server::shutdown()

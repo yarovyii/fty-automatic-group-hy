@@ -28,20 +28,21 @@ unsigned Remove::run()
     fty::commands::remove::In in;
     in.append(fty::convert<uint64_t>(*strIdPrt));
 
-    msg.userData.setString(*pack::json::serialize(in));
+    msg.userData.append(*pack::json::serialize(in));
 
     auto ret = bus.send(fty::Channel, msg);
     if (!ret) {
         throw rest::errors::Internal(ret.error());
     }
 
-    auto info = ret->userData.decode<fty::commands::remove::Out>();
+    commands::remove::Out out;
+    auto info = pack::json::deserialize(ret->userData[0], out);
     if (!info) {
         throw rest::errors::Internal(info.error());
     }
 
-    if (info->size()) {
-        m_reply << *pack::json::serialize(*info);
+    if (out.size()) {
+        m_reply << *pack::json::serialize(out);
     } else {
         m_reply << "[]";
     }

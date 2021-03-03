@@ -27,31 +27,33 @@ unsigned List::run()
         throw rest::errors::Internal(ret.error());
     }
 
-    auto info = ret->userData.decode<fty::commands::list::Out>();
+    commands::list::Out listOut;
+    auto info = pack::json::deserialize(ret->userData[0], listOut);
     if (!info) {
         throw rest::errors::Internal(info.error());
     }
 
-    if (info->size()) {
+    if (listOut.size()) {
         pack::ObjectList<fty::commands::read::Out> out;
-        for(const auto& it: *info) {
+        for(const auto& it: listOut) {
             fty::Message readMsg = message(fty::commands::read::Subject);
 
             fty::commands::read::In in;
             in.id = it.id;
 
-            readMsg.userData.setString(*pack::json::serialize(in));
+            readMsg.userData.append(*pack::json::serialize(in));
 
             auto readRet = bus.send(fty::Channel, readMsg);
             if (!readRet) {
                 throw rest::errors::Internal(readRet.error());
             }
 
-            auto group = readRet->userData.decode<fty::commands::read::Out>();
-            if (!group) {
-                throw rest::errors::Internal(group.error());
+            commands::read::Out group;
+            auto r = pack::json::deserialize(readRet->userData[0], group);
+            if (!r) {
+                throw rest::errors::Internal(r.error());
             }
-            out.append(*group);
+            out.append(group);
         }
         m_reply << *pack::json::serialize(out);
     } else {
