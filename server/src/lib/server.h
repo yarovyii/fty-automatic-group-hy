@@ -4,10 +4,6 @@
 #include <fty/event.h>
 #include <fty/thread-pool.h>
 
-namespace messagebus {
-class Message;
-}
-
 namespace fty {
 
 class Server
