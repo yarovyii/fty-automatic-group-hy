@@ -19,15 +19,19 @@ public:
     };
 
     class WRITE {
-        Mutex& m;
+        Mutex * m;
     public:
+        WRITE();
+        ~WRITE();
         void lock();
         void unlock();
     };
 
     class READ {
-        Mutex& m;
+        Mutex * m;
     public:
+        READ();
+        ~READ();
         void lock();
         void unlock();
     };
