@@ -24,7 +24,7 @@ unsigned Create::run()
     }
 
     auto msg = message(commands::create::Subject);
-    msg.userData.append(json);
+    msg.setData(json);
 
     if (auto ret = bus.send(fty::Channel, msg)) {
         commands::create::Out out;

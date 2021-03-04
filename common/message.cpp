@@ -57,9 +57,7 @@ Message::Message(const messagebus::Message& msg)
 
     meta.status.fromString(value(msg.metaData(), messagebus::Message::STATUS, "ok"));
 
-    for(const auto& el : msg.userData()) {
-        userData.append(el);
-    }
+    setData(msg.userData());
 }
 
 messagebus::Message Message::toMessageBus() const
@@ -79,6 +77,20 @@ messagebus::Message Message::toMessageBus() const
     }
 
     return msg;
+}
+
+void Message::setData(const std::string& data)
+{
+    userData.clear();
+    userData.append(data);
+}
+
+void Message::setData(const std::list<std::string>& data)
+{
+    userData.clear();
+    for(const auto& str : data) {
+        userData.append(str);
+    }
 }
 
 // ===========================================================================================================

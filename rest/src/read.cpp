@@ -51,7 +51,7 @@ unsigned Read::run()
     fty::commands::read::In in;
     in.id = fty::convert<uint16_t>(*strIdPrt);
 
-    msg.userData.append(*pack::json::serialize(in));
+    msg.setData(*pack::json::serialize(in));
 
     auto ret = bus.send(fty::Channel, msg);
     if (!ret) {

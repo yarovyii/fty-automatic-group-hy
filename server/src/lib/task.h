@@ -66,18 +66,18 @@ public:
 
         if (status == Message::Status::Ok) {
             if (out.hasValue()) {
-                msg.userData.append(*pack::json::serialize(out));
+                msg.setData(*pack::json::serialize(out));
             } else {
                 if constexpr (std::is_base_of_v<pack::IList, T>) {
-                    msg.userData.append("[]");
+                    msg.setData("[]");
                 } else if constexpr (std::is_base_of_v<pack::IMap, T> || std::is_base_of_v<pack::INode, T>) {
-                    msg.userData.append("{}");
+                    msg.setData("{}");
                 } else {
-                    msg.userData.append("");
+                    msg.setData("");
                 }
             }
         } else {
-            msg.userData.append(error);
+            msg.setData(error);
         }
         return msg;
     }
@@ -106,7 +106,7 @@ public:
         Message msg;
         msg.meta.status = status;
         if (status != Message::Status::Ok) {
-            msg.userData.append(error);
+            msg.setData(error);
         }
         return msg;
     }
@@ -132,7 +132,7 @@ public:
         try {
             if (auto it = dynamic_cast<T*>(this)) {
                 if constexpr (!std::is_same<InputT, void>::value) {
-                    if (m_in.userData[0].empty()) {
+                    if (m_in.userData.empty() || m_in.userData[0].empty()) {
                         throw Error("Wrong input data: payload is empty");
                     }
 

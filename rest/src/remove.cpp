@@ -28,7 +28,7 @@ unsigned Remove::run()
     fty::commands::remove::In in;
     in.append(fty::convert<uint64_t>(*strIdPrt));
 
-    msg.userData.append(*pack::json::serialize(in));
+    msg.setData(*pack::json::serialize(in));
 
     auto ret = bus.send(fty::Channel, msg);
     if (!ret) {

@@ -36,7 +36,7 @@ unsigned Edit::run()
     }
 
     auto msg = message(commands::update::Subject);
-    msg.userData.append(*pack::json::serialize(group));
+    msg.setData(*pack::json::serialize(group));
 
     if (auto ret = bus.send(fty::Channel, msg)) {
         commands::update::Out out;

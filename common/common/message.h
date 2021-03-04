@@ -21,6 +21,8 @@
 
 #pragma once
 #include <pack/pack.h>
+#include <list>
+#include <string>
 
 // =====================================================================================================================
 
@@ -69,6 +71,8 @@ public:
 public:
     explicit Message(const messagebus::Message& msg);
     messagebus::Message toMessageBus() const;
+    void setData(const std::string& data);
+    void setData(const std::list<std::string>& data);
 };
 
 inline std::ostream& operator<<(std::ostream& ss, Message::Status status)

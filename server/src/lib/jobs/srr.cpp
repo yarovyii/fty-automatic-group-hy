@@ -46,9 +46,7 @@ void SrrProcess::run()
         const auto subject = m_in.meta.subject;
         const auto replyTo = m_in.meta.replyTo;
 
-        for(const auto& el : respData) {
-            resp.userData.append(el);
-        }
+        resp.setData(respData);
 
         resp.meta.status = Message::Status::Ok;
 
@@ -58,7 +56,7 @@ void SrrProcess::run()
     } catch (const Error& err) {
             logError("Error: {}", err.what());
             resp.meta.status = Message::Status::Error;
-            resp.userData.append(err.what());
+            resp.setData(err.what());
             if (auto res = m_bus->reply(fty::Channel, m_in, resp); !res) {
                 logError(res.error());
             }
