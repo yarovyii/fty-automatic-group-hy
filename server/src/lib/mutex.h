@@ -20,6 +20,7 @@ public:
 
     class WRITE {
         Mutex * m;
+        bool locked;
     public:
         WRITE();
         ~WRITE();
@@ -29,6 +30,7 @@ public:
 
     class READ {
         Mutex * m;
+        bool locked;
     public:
         READ();
         ~READ();

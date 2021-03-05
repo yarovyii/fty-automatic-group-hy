@@ -2,91 +2,158 @@
 #include <catch2/catch.hpp>
 #include <lib/mutex.h>
 #include <thread>
+#include <vector>
 
-TEST_CASE("Lock/Unlock")
+TEST_CASE("Lock/Unlock storage Mutex")
 {
     bool                th1    = false;
     std::atomic<size_t> result = 0;
+    std::vector<std::thread *>  pool;
+
+    pool.reserve(10);
 
     // Call one reader
-    std::thread *th;
-    th = new std::thread([&]{
+    pool.emplace_back(new std::thread([&]{
         fty::storage::Mutex::READ r;
         r.lock();
+        r.unlock();
         th1 = true;
-    });
+    }));
+    std::this_thread::sleep_for(std::chrono::milliseconds(150));
+    REQUIRE(th1);
+    
+    // Call one Writer
+    th1 = false;
+    pool.emplace_back(new std::thread([&]{
+        fty::storage::Mutex::WRITE r;
+        r.lock();
+        r.unlock();
+        th1 = true;
+    }));
+    std::this_thread::sleep_for(std::chrono::milliseconds(150));
+    REQUIRE(th1);
 
-    // Call more readers - should work with previous
+     // Call more readers - should work with previous
     for (size_t i = 0; i < 5; i++) {
-        th = new std::thread([&] {
+        pool.emplace_back(new std::thread([&] {
             fty::storage::Mutex::READ r;
             r.lock();
             result++;
-        });
+            std::this_thread::sleep_for(std::chrono::milliseconds(1500));
+            r.unlock();
+            result--;
+        }));
     }
-    std::this_thread::sleep_for(std::chrono::milliseconds(1500));
+    std::this_thread::sleep_for(std::chrono::milliseconds(300));
     REQUIRE(result == 5);
 
     // Call Writer, should not work because we are in READ mode
     bool        th2 = false;
-    th = new std::thread([&] {
+    bool        th5 = false;
+    pool.emplace_back(new std::thread([&] {
         fty::storage::Mutex::WRITE r;
         r.lock();
         th2 = true;
-    });
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        r.unlock();
+        th5 = true;
+    }));
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    std::this_thread::sleep_for(std::chrono::milliseconds(250));
     REQUIRE(!th2);
+    REQUIRE(!th5);
 
     // Unlock all readers, will make OPEN mode
-    for (size_t i = 0; i < 6; i++) {
-        th = new std::thread([&] {
-            fty::storage::Mutex::READ r;
-            r.unlock();
-        });
-    }
-    std::this_thread::sleep_for(std::chrono::milliseconds(250));
+    std::this_thread::sleep_for(std::chrono::milliseconds(1600));
+    REQUIRE(result == 0);
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
     // WRiter can write and lock ascces to WRITE mode
     REQUIRE(th2);
+    REQUIRE(!th5);
 
+    // add Reader, cannot read because WRITE mode
     th2 = false;
     th1 = false;
-    // add Reader, cannot read because WRITE mode
-    th = new std::thread([&] {
+    pool.emplace_back(new std::thread([&] {
         fty::storage::Mutex::WRITE r;
         r.lock();
         th2 = true;
         r.unlock();
         th1 = true;
-    });
+    }));
     REQUIRE(!th2);
     REQUIRE(!th1);
 
     // Call another writer| cannot write
     bool th3 = false;
     bool th4 = false;
-    th = new std::thread([&] {
+    pool.emplace_back(new std::thread([&] {
         fty::storage::Mutex::WRITE r;
         r.lock();   //must be locked here
         th3 = true;
         r.unlock();
         th4 = true;
-    });
+    }));
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     REQUIRE(!th3);
 
     //unlock WRITE and this action will give access to another
-    fty::storage::Mutex::WRITE r;
-    r.unlock();
+    std::this_thread::sleep_for(std::chrono::milliseconds(900));
+    REQUIRE(th5);   //open writer
     std::this_thread::sleep_for(std::chrono::milliseconds(300));
-    REQUIRE(th3);
+    REQUIRE(th2);   //reader
+    REQUIRE(th1);
+    REQUIRE(th3);   //writer
     REQUIRE(th4);
     
-    std::this_thread::sleep_for(std::chrono::milliseconds(300));
 
-    //open for Reader who waited
-    REQUIRE(th2);
+    th1 = false;
+    th2 = false;
+    pool.emplace_back(new std::thread([&] {
+        fty::storage::Mutex::READ m;
+        m.unlock();
+        m.unlock();
+        m.unlock();
+        m.lock();
+        th1 = true;
+        m.lock();
+        m.unlock();
+        th2 = true;
+    }));
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    REQUIRE(th1);
     REQUIRE(th2);
 
-    th->join();
+
+    th3 = false;
+    th4 = false;
+    pool.emplace_back(new std::thread([&] {
+        fty::storage::Mutex::WRITE m;
+        m.lock(); 
+        m.lock(); 
+        th3 = true;
+        m.unlock();
+        th4 = true;
+    }));
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    REQUIRE(th3);
+    REQUIRE(th4);
+
+    // Call one reader
+    th1 = false;
+    pool.emplace_back(new std::thread([&]{
+        fty::storage::Mutex::READ r;
+        r.lock();
+        r.unlock();
+        th1 = true;
+    }));
+    std::this_thread::sleep_for(std::chrono::milliseconds(150));
+    REQUIRE(th1);
+
+    for(auto th : pool){
+        th->join();
+        delete th;
+    }
 }

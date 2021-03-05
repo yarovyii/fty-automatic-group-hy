@@ -17,10 +17,10 @@ Mutex::~Mutex()
 {
 }
 
-
 Mutex::WRITE::WRITE()
 {
     m = new Mutex();
+    locked = false;
 }
 
 Mutex::WRITE::~WRITE()
@@ -30,17 +30,24 @@ Mutex::WRITE::~WRITE()
 
 void Mutex::WRITE::lock()
 {
-    m->lock(AccessType::WRITE);
+    if(!locked){
+        locked = true;
+        m->lock(AccessType::WRITE);
+    }
 }
 
 void Mutex::WRITE::unlock()
 {
-    m->unlock(AccessType::WRITE);
+    if(locked){
+        locked = false;
+        m->unlock(AccessType::WRITE);
+    }
 }
 
 Mutex::READ::READ()
 {
     m = new Mutex();
+    locked = false;
 }
 
 Mutex::READ::~READ()
@@ -49,13 +56,19 @@ Mutex::READ::~READ()
 }
 
 void Mutex::READ::lock()
-{
-    m->lock(AccessType::READ);
+{   
+    if(!locked){
+        locked = true;
+        m->lock(AccessType::READ);
+    }
 }
 
 void Mutex::READ::unlock()
-{
-    m->unlock(AccessType::READ);
+{   
+    if(locked){
+        locked = false;
+        m->unlock(AccessType::READ);
+    }
 }
 
 Expected<void> Mutex::lock(AccessType access)
