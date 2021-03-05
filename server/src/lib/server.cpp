@@ -1,14 +1,18 @@
 #include "server.h"
-#include "daemon.h"
-#include "config.h"
 #include "common/logger.h"
+#include "common/message-bus.h"
+#include "common/srr.h"
+#include "config.h"
+#include "daemon.h"
 #include "jobs/create.h"
-#include "jobs/update.h"
-#include "jobs/remove.h"
 #include "jobs/list.h"
 #include "jobs/read.h"
+#include "jobs/remove.h"
 #include "jobs/resolve.h"
+#include "jobs/srr.h"
+#include "jobs/update.h"
 #include <asset/db.h>
+#include <fty_common_messagebus.h>
 
 namespace fty {
 
@@ -21,7 +25,11 @@ Expected<void> Server::run()
         return unexpected(res.error());
     }
 
-    if (auto sub = m_bus.subsribe(fty::Channel, &Server::process, this); !sub) {
+    if (auto sub = m_bus.subscribe(Channel, &Server::process, this); !sub) {
+        return unexpected(sub.error());
+    }
+
+    if (auto sub = m_bus.subscribe(common::srr::Channel, &Server::srrProcess, this); !sub) {
         return unexpected(sub.error());
     }
 
@@ -45,7 +53,7 @@ void Server::reloadConfig()
 
 void Server::process(const Message& msg)
 {
-    logDebug("Automatic group: got message {}, payload:\n   {}", msg.meta.subject.value(), msg.userData.asString());
+    logDebug("Automatic group: got message {}", msg.dump());
     if (msg.meta.subject == commands::create::Subject) {
         m_pool.pushWorker<job::Create>(msg, m_bus);
     } else if (msg.meta.subject == commands::update::Subject) {
@@ -59,6 +67,12 @@ void Server::process(const Message& msg)
     } else if (msg.meta.subject == commands::resolve::Subject) {
         m_pool.pushWorker<job::Resolve>(msg, m_bus);
     }
+}
+
+void Server::srrProcess(const Message& msg)
+{
+    logDebug("Automatic group: got SRR request {}", msg.dump());
+    m_pool.pushWorker<job::SrrProcess>(msg, m_bus);
 }
 
 void Server::shutdown()

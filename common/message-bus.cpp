@@ -56,7 +56,7 @@ Expected<Message> MessageBus::send(const std::string& queue, const Message& msg)
     try {
         Message m(m_bus->request(queue, msg.toMessageBus(), 10000));
         if (m.meta.status == Message::Status::Error) {
-            return unexpected(*m.userData.decode<std::string>());
+            return unexpected(m.userData[0]);
         }
         return Expected<Message>(m);
     } catch (messagebus::MessageBusException& ex) {
@@ -81,8 +81,8 @@ Expected<void> MessageBus::reply(const std::string& queue, const Message& req, c
     std::lock_guard<std::mutex> lock(m_mutex);
 
     answ.meta.correlationId = req.meta.correlationId;
-    answ.meta.to            = req.meta.from;
-    answ.meta.from          = req.meta.to;
+    answ.meta.to            = req.meta.replyTo;
+    answ.meta.from          = m_actorName;
 
     try {
         m_bus->sendReply(queue, answ.toMessageBus());
@@ -92,7 +92,7 @@ Expected<void> MessageBus::reply(const std::string& queue, const Message& req, c
     }
 }
 
-Expected<Message> MessageBus::recieve(const std::string& queue)
+Expected<Message> MessageBus::receive(const std::string& queue)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
     Message                     ret;
@@ -106,7 +106,7 @@ Expected<Message> MessageBus::recieve(const std::string& queue)
     }
 }
 
-Expected<void> MessageBus::subsribe(const std::string& queue, std::function<void(const messagebus::Message&)>&& func)
+Expected<void> MessageBus::subscribe(const std::string& queue, std::function<void(const messagebus::Message&)>&& func)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
     try {

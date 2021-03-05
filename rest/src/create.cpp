@@ -24,11 +24,12 @@ unsigned Create::run()
     }
 
     auto msg = message(commands::create::Subject);
-    msg.userData.setString(json);
+    msg.setData(json);
 
     if (auto ret = bus.send(fty::Channel, msg)) {
-        if (auto info = ret->userData.decode<fty::commands::create::Out>()) {
-            m_reply << *pack::json::serialize(*info);
+        commands::create::Out out;
+        if (auto info = pack::json::deserialize(ret->userData[0], out)) {
+            m_reply << *pack::json::serialize(out);
             return HTTP_OK;
         } else {
             throw rest::errors::Internal(info.error());
