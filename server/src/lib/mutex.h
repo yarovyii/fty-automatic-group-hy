@@ -10,30 +10,25 @@ namespace fty::storage {
 class Mutex
 {
 public:
-    Mutex();
-    ~Mutex();
-
     enum class AccessType{
         READ,
         WRITE
     };
 
-    class WRITE {
-        Mutex * m;
-        bool locked;
+    class Write {
+        std::unique_ptr<Mutex> m_m;
+        bool m_locked = false;
     public:
-        WRITE();
-        ~WRITE();
+        Write();
         void lock();
         void unlock();
     };
 
-    class READ {
-        Mutex * m;
-        bool locked;
+    class Read {
+        std::unique_ptr<Mutex> m_m;
+        bool m_locked = false;
     public:
-        READ();
-        ~READ();
+        Read();
         void lock();
         void unlock();
     };
@@ -42,8 +37,8 @@ private:
 
     static std::optional<AccessType>    m_currentAccess;
     static std::atomic<uint16_t>        m_activeReaders;
-    static std::mutex                   m_mx_currentAccess;
-    static std::condition_variable      m_cv_access;
+    static std::mutex                   m_mxCurrentAccess;
+    static std::condition_variable      m_cvAccess;
 
     Expected<void>  lock(AccessType access);
     Expected<void>  unlock(AccessType access);

@@ -10,11 +10,9 @@ TEST_CASE("Lock/Unlock storage Mutex")
     std::atomic<size_t> result = 0;
     std::vector<std::thread *>  pool;
 
-    pool.reserve(10);
-
     // Call one reader
     pool.emplace_back(new std::thread([&]{
-        fty::storage::Mutex::READ r;
+        fty::storage::Mutex::Read r;
         r.lock();
         r.unlock();
         th1 = true;
@@ -25,7 +23,7 @@ TEST_CASE("Lock/Unlock storage Mutex")
     // Call one Writer
     th1 = false;
     pool.emplace_back(new std::thread([&]{
-        fty::storage::Mutex::WRITE r;
+        fty::storage::Mutex::Write r;
         r.lock();
         r.unlock();
         th1 = true;
@@ -36,7 +34,7 @@ TEST_CASE("Lock/Unlock storage Mutex")
      // Call more readers - should work with previous
     for (size_t i = 0; i < 5; i++) {
         pool.emplace_back(new std::thread([&] {
-            fty::storage::Mutex::READ r;
+            fty::storage::Mutex::Read r;
             r.lock();
             result++;
             std::this_thread::sleep_for(std::chrono::milliseconds(1500));
@@ -51,7 +49,7 @@ TEST_CASE("Lock/Unlock storage Mutex")
     bool        th2 = false;
     bool        th5 = false;
     pool.emplace_back(new std::thread([&] {
-        fty::storage::Mutex::WRITE r;
+        fty::storage::Mutex::Write r;
         r.lock();
         th2 = true;
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
@@ -77,7 +75,7 @@ TEST_CASE("Lock/Unlock storage Mutex")
     th2 = false;
     th1 = false;
     pool.emplace_back(new std::thread([&] {
-        fty::storage::Mutex::WRITE r;
+        fty::storage::Mutex::Write r;
         r.lock();
         th2 = true;
         r.unlock();
@@ -90,7 +88,7 @@ TEST_CASE("Lock/Unlock storage Mutex")
     bool th3 = false;
     bool th4 = false;
     pool.emplace_back(new std::thread([&] {
-        fty::storage::Mutex::WRITE r;
+        fty::storage::Mutex::Write r;
         r.lock();   //must be locked here
         th3 = true;
         r.unlock();
@@ -112,7 +110,7 @@ TEST_CASE("Lock/Unlock storage Mutex")
     th1 = false;
     th2 = false;
     pool.emplace_back(new std::thread([&] {
-        fty::storage::Mutex::READ m;
+        fty::storage::Mutex::Read m;
         m.unlock();
         m.unlock();
         m.unlock();
@@ -130,7 +128,7 @@ TEST_CASE("Lock/Unlock storage Mutex")
     th3 = false;
     th4 = false;
     pool.emplace_back(new std::thread([&] {
-        fty::storage::Mutex::WRITE m;
+        fty::storage::Mutex::Write m;
         m.lock(); 
         m.lock(); 
         th3 = true;
@@ -144,7 +142,7 @@ TEST_CASE("Lock/Unlock storage Mutex")
     // Call one reader
     th1 = false;
     pool.emplace_back(new std::thread([&]{
-        fty::storage::Mutex::READ r;
+        fty::storage::Mutex::Read r;
         r.lock();
         r.unlock();
         th1 = true;

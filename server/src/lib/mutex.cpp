@@ -1,137 +1,99 @@
 #include "mutex.h"
 #include <iostream>
 #include <mutex>
+#include <sys/file.h>
 
 namespace fty::storage {
 
 std::optional<fty::storage::Mutex::AccessType> Mutex::m_currentAccess;
 std::atomic<uint16_t>                          Mutex::m_activeReaders;
-std::mutex                                     Mutex::m_mx_currentAccess;
-std::condition_variable                        Mutex::m_cv_access;
+std::mutex                                     Mutex::m_mxCurrentAccess;
+std::condition_variable                        Mutex::m_cvAccess;
 
-Mutex::Mutex()
+Mutex::Write::Write()
+    : m_m(new Mutex)
 {
 }
 
-Mutex::~Mutex()
+void Mutex::Write::lock()
 {
-}
-
-Mutex::WRITE::WRITE()
-{
-    m = new Mutex();
-    locked = false;
-}
-
-Mutex::WRITE::~WRITE()
-{
-    delete m;
-}
-
-void Mutex::WRITE::lock()
-{
-    if(!locked){
-        locked = true;
-        m->lock(AccessType::WRITE);
+    if (!m_locked) {
+        m_locked = true;
+        m_m->lock(AccessType::WRITE);
     }
 }
 
-void Mutex::WRITE::unlock()
+void Mutex::Write::unlock()
 {
-    if(locked){
-        locked = false;
-        m->unlock(AccessType::WRITE);
+    if (m_locked) {
+        m_locked = false;
+        m_m->unlock(AccessType::WRITE);
     }
 }
 
-Mutex::READ::READ()
+Mutex::Read::Read()
+    : m_m(new Mutex)
 {
-    m = new Mutex();
-    locked = false;
 }
 
-Mutex::READ::~READ()
+void Mutex::Read::lock()
 {
-    delete m;
-}
-
-void Mutex::READ::lock()
-{   
-    if(!locked){
-        locked = true;
-        m->lock(AccessType::READ);
+    if (!m_locked) {
+        m_locked = true;
+        m_m->lock(AccessType::READ);
     }
 }
 
-void Mutex::READ::unlock()
-{   
-    if(locked){
-        locked = false;
-        m->unlock(AccessType::READ);
+void Mutex::Read::unlock()
+{
+    if (m_locked) {
+        m_locked = false;
+        m_m->unlock(AccessType::READ);
     }
 }
 
 Expected<void> Mutex::lock(AccessType access)
 {
-    std::unique_lock<std::mutex> locker(m_mx_currentAccess);
-    if (!m_currentAccess.has_value()) {
-        m_currentAccess = access;
-    } else if (access == AccessType::READ && m_currentAccess != AccessType::READ) {
-        locker.unlock();
-
-        std::mutex                   mx_tmp;
-        std::unique_lock<std::mutex> tmpLocker(mx_tmp);
-
-        m_cv_access.wait(tmpLocker, [&]() {
-            locker.lock();
-            if (m_currentAccess == AccessType::READ || !m_currentAccess.has_value()) {
-                return true;
-            }
-            locker.unlock();
-            return false;
+    try {
+        std::unique_lock<std::mutex> locker(m_mxCurrentAccess);
+        m_cvAccess.wait(locker, [&]() {
+            return (
+                (m_currentAccess == AccessType::READ && access == AccessType::READ) || !m_currentAccess.has_value());
         });
 
-        locker.unlock();
-        m_cv_access.notify_all();
-    } else if (access == AccessType::WRITE) {
-        if (m_currentAccess.has_value()){
+        if (access == AccessType::READ) {
+            m_currentAccess = access;
             locker.unlock();
+            m_cvAccess.notify_all();
+            m_activeReaders++;
+        } else if (access == AccessType::WRITE) {
+            m_currentAccess = access;
 
-            std::mutex                   mx_tmp;
-            std::unique_lock<std::mutex> tmpLocker(mx_tmp);
-
-            m_cv_access.wait(tmpLocker, [&]() {
-                locker.lock();
-                if (!m_currentAccess.has_value()) {
-                    return true;
-                }
-                locker.unlock();
-                return false;
-            });
+            // flock(fd, LOCK_EX);
         }
-        // flock close for WRITE
+    } catch (const std::system_error& e) {
+        return unexpected(e.what());
     }
-
-    if (access == AccessType::READ) {
-        m_activeReaders++;
-    }
-    m_currentAccess = access;
     return {};
 }
 
 Expected<void> Mutex::unlock(AccessType access)
 {
-    std::unique_lock<std::mutex> locker(m_mx_currentAccess);
-    if (access == AccessType::READ)
-        m_activeReaders--;
-    else if (access == AccessType::WRITE) {
-        // flock open
-    }
-    if (access == AccessType::WRITE || m_activeReaders == 0)
-        m_currentAccess.reset();
+    try {
+        std::unique_lock<std::mutex> locker(m_mxCurrentAccess);
+        if (access == AccessType::READ)
+            m_activeReaders--;
+        else if (access == AccessType::WRITE) {
+            // flock(fd, LOCK_UN);
+        }
+        if (access == AccessType::WRITE || m_activeReaders == 0)
+            m_currentAccess.reset();
 
-    locker.unlock();
-    m_cv_access.notify_all(); // or notify_one - not sure about it
+        locker.unlock();
+        m_cvAccess.notify_all();
+    } catch (const std::system_error& e) {
+        return unexpected(e.what());
+    }
 
     return {};
 }
