@@ -6,12 +6,12 @@
 
 TEST_CASE("Lock/Unlock storage Mutex")
 {
-    bool                th1    = false;
-    std::atomic<size_t> result = 0;
-    std::vector<std::thread *>  pool;
+    bool                     th1    = false;
+    std::atomic<size_t>      result = 0;
+    std::vector<std::thread> pool;
 
     // Call one reader
-    pool.emplace_back(new std::thread([&]{
+    pool.emplace_back(std::thread([&] {
         fty::storage::Mutex::Read r;
         r.lock();
         r.unlock();
@@ -19,10 +19,10 @@ TEST_CASE("Lock/Unlock storage Mutex")
     }));
     std::this_thread::sleep_for(std::chrono::milliseconds(150));
     REQUIRE(th1);
-    
+
     // Call one Writer
     th1 = false;
-    pool.emplace_back(new std::thread([&]{
+    pool.emplace_back(std::thread([&] {
         fty::storage::Mutex::Write r;
         r.lock();
         r.unlock();
@@ -31,9 +31,9 @@ TEST_CASE("Lock/Unlock storage Mutex")
     std::this_thread::sleep_for(std::chrono::milliseconds(150));
     REQUIRE(th1);
 
-     // Call more readers - should work with previous
+    // Call more readers - should work with previous
     for (size_t i = 0; i < 5; i++) {
-        pool.emplace_back(new std::thread([&] {
+        pool.emplace_back(std::thread([&] {
             fty::storage::Mutex::Read r;
             r.lock();
             result++;
@@ -46,9 +46,9 @@ TEST_CASE("Lock/Unlock storage Mutex")
     REQUIRE(result == 5);
 
     // Call Writer, should not work because we are in READ mode
-    bool        th2 = false;
-    bool        th5 = false;
-    pool.emplace_back(new std::thread([&] {
+    bool th2 = false;
+    bool th5 = false;
+    pool.emplace_back(std::thread([&] {
         fty::storage::Mutex::Write r;
         r.lock();
         th2 = true;
@@ -74,7 +74,7 @@ TEST_CASE("Lock/Unlock storage Mutex")
     // add Reader, cannot read because WRITE mode
     th2 = false;
     th1 = false;
-    pool.emplace_back(new std::thread([&] {
+    pool.emplace_back(std::thread([&] {
         fty::storage::Mutex::Write r;
         r.lock();
         th2 = true;
@@ -87,9 +87,9 @@ TEST_CASE("Lock/Unlock storage Mutex")
     // Call another writer| cannot write
     bool th3 = false;
     bool th4 = false;
-    pool.emplace_back(new std::thread([&] {
+    pool.emplace_back(std::thread([&] {
         fty::storage::Mutex::Write r;
-        r.lock();   //must be locked here
+        r.lock(); // must be locked here
         th3 = true;
         r.unlock();
         th4 = true;
@@ -97,19 +97,19 @@ TEST_CASE("Lock/Unlock storage Mutex")
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     REQUIRE(!th3);
 
-    //unlock WRITE and this action will give access to another
+    // unlock WRITE and this action will give access to another
     std::this_thread::sleep_for(std::chrono::milliseconds(900));
-    REQUIRE(th5);   //open writer
+    REQUIRE(th5); // open writer
     std::this_thread::sleep_for(std::chrono::milliseconds(300));
-    REQUIRE(th2);   //reader
+    REQUIRE(th2); // reader
     REQUIRE(th1);
-    REQUIRE(th3);   //writer
+    REQUIRE(th3); // writer
     REQUIRE(th4);
-    
+
 
     th1 = false;
     th2 = false;
-    pool.emplace_back(new std::thread([&] {
+    pool.emplace_back(std::thread([&] {
         fty::storage::Mutex::Read m;
         m.unlock();
         m.unlock();
@@ -127,10 +127,10 @@ TEST_CASE("Lock/Unlock storage Mutex")
 
     th3 = false;
     th4 = false;
-    pool.emplace_back(new std::thread([&] {
+    pool.emplace_back(std::thread([&] {
         fty::storage::Mutex::Write m;
-        m.lock(); 
-        m.lock(); 
+        m.lock();
+        m.lock();
         th3 = true;
         m.unlock();
         th4 = true;
@@ -141,7 +141,7 @@ TEST_CASE("Lock/Unlock storage Mutex")
 
     // Call one reader
     th1 = false;
-    pool.emplace_back(new std::thread([&]{
+    pool.emplace_back(std::thread([&] {
         fty::storage::Mutex::Read r;
         r.lock();
         r.unlock();
@@ -150,8 +150,8 @@ TEST_CASE("Lock/Unlock storage Mutex")
     std::this_thread::sleep_for(std::chrono::milliseconds(150));
     REQUIRE(th1);
 
-    for(auto th : pool){
-        th->join();
-        delete th;
+    for (auto& th : pool) {
+        th.join();
+        // delete th;
     }
 }
