@@ -10,6 +10,7 @@ inline fty::Message message(const std::string& subj)
 {
     fty::Message msg;
     msg.meta.to      = "automatic-group";
+    msg.meta.replyTo = AgentName;
     msg.meta.subject = subj;
     msg.meta.from    = AgentName;
     return msg;
