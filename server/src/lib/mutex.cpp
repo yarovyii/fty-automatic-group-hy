@@ -1,7 +1,10 @@
 #include "mutex.h"
+#include "config.h"
 #include <iostream>
 #include <mutex>
 #include <sys/file.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 namespace fty::storage {
 
@@ -69,7 +72,15 @@ Expected<void> Mutex::lock(AccessType access)
         } else if (access == AccessType::WRITE) {
             m_currentAccess = access;
 
-            // flock(fd, LOCK_EX);
+            std::string path = fty::Config::instance().dbpath;
+
+            if (m_fd = open(path.c_str(), O_WRONLY | O_CREAT, 0600); m_fd == -1) {
+                return unexpected(strerror(errno));
+            }
+
+            if (flock(m_fd, LOCK_EX | LOCK_NB) != 0) {
+                return unexpected(strerror(errno));
+            }
         }
     } catch (const std::system_error& e) {
         return unexpected(e.what());
@@ -81,13 +92,19 @@ Expected<void> Mutex::unlock(AccessType access)
 {
     try {
         std::unique_lock<std::mutex> locker(m_mxCurrentAccess);
-        if (access == AccessType::READ)
+        if (access == AccessType::READ) {
             m_activeReaders--;
-        else if (access == AccessType::WRITE) {
-            // flock(fd, LOCK_UN);
+        } else if (access == AccessType::WRITE) {
+            if (flock(m_fd, LOCK_UN) != 0) {
+                return unexpected(strerror(errno));
+            }
+            if (close(m_fd) != 0) {
+                return unexpected(strerror(errno));
+            }
         }
-        if (access == AccessType::WRITE || m_activeReaders == 0)
+        if (access == AccessType::WRITE || m_activeReaders == 0) {
             m_currentAccess.reset();
+        }
 
         locker.unlock();
         m_cvAccess.notify_all();

@@ -44,6 +44,8 @@ private:
     static std::mutex                m_mxCurrentAccess;
     static std::condition_variable   m_cvAccess;
 
+    int m_fd = 0;
+
     Expected<void> lock(AccessType access);
     Expected<void> unlock(AccessType access);
 };

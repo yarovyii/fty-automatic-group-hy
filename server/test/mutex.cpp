@@ -152,6 +152,5 @@ TEST_CASE("Lock/Unlock storage Mutex")
 
     for (auto& th : pool) {
         th.join();
-        // delete th;
     }
 }
