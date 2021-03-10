@@ -22,7 +22,9 @@ void Mutex::Write::lock()
 {
     if (!m_locked) {
         m_locked = true;
-        m_m->lock(AccessType::WRITE);
+        if (auto err = m_m->lock(AccessType::WRITE); !err) {
+            throw std::runtime_error(err.error());
+        }
     }
 }
 
@@ -43,7 +45,9 @@ void Mutex::Read::lock()
 {
     if (!m_locked) {
         m_locked = true;
-        m_m->lock(AccessType::READ);
+        if (auto err = m_m->lock(AccessType::READ); !err) {
+            throw std::runtime_error(err.error());
+        }
     }
 }
 
@@ -94,13 +98,15 @@ Expected<void> Mutex::unlock(AccessType access)
         std::unique_lock<std::mutex> locker(m_mxCurrentAccess);
         if (access == AccessType::READ) {
             m_activeReaders--;
-        } else if (access == AccessType::WRITE) {
+        } else if (access == AccessType::WRITE && m_fd > 0) {
             if (flock(m_fd, LOCK_UN) != 0) {
                 return unexpected(strerror(errno));
             }
             if (close(m_fd) != 0) {
                 return unexpected(strerror(errno));
             }
+
+            m_fd = 0;
         }
         if (access == AccessType::WRITE || m_activeReaders == 0) {
             m_currentAccess.reset();
