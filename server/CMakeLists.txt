@@ -13,6 +13,8 @@ etn_target(static ${PROJECT_NAME}-static
         src/lib/server.h
         src/lib/server.cpp
         src/lib/task.h
+        src/lib/mutex.h
+        src/lib/mutex.cpp
 
         src/lib/jobs/create.h
         src/lib/jobs/create.cpp
@@ -92,6 +94,7 @@ if (BUILD_TESTING)
             test/create.cpp
             test/read.cpp
             test/resolve.cpp
+            test/mutex.cpp
 
             test/db.cpp
             test/db.h
