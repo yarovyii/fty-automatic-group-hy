@@ -126,6 +126,77 @@ TEST_CASE("Resolve by name")
     CHECK(fty::Storage::clear());
 }
 
+TEST_CASE("Resolve by InternalName")
+{
+    REQUIRE(fty::GroupsDB::init());
+
+    Group group;
+    group.name          = "ByInternalName";
+    group.rules.groupOp = fty::Group::LogicalOp::And;
+
+    auto& var  = group.rules.conditions.append();
+    auto& cond = var.reset<fty::Group::Condition>();
+    cond.field = fty::Group::Fields::InternalName;
+
+    SECTION("Contains")
+    {
+        cond.value = "srv";
+        cond.op    = fty::Group::ConditionOp::Contains;
+
+        auto g = group.create();
+        auto info = g.resolve();
+
+        REQUIRE(info.size() == 5);
+        CHECK(info[0].name == "srv1");
+        CHECK(info[1].name == "srv2");
+        CHECK(info[2].name == "srv3");
+        CHECK(info[3].name == "srv11");
+        CHECK(info[4].name == "srv21");
+    }
+
+    SECTION("Is")
+    {
+        cond.value = "srv1";
+        cond.op    = fty::Group::ConditionOp::Is;
+
+        auto g = group.create();
+        auto info = g.resolve();
+
+        REQUIRE(info.size() == 1);
+        CHECK(info[0].name == "srv1");
+    }
+
+    SECTION("IsNot")
+    {
+        cond.value = "srv1";
+        cond.op    = fty::Group::ConditionOp::IsNot;
+
+        auto g = group.create();
+        auto info = g.resolve();
+
+        REQUIRE(info.size() == 6);
+        CHECK(info[0].name == "datacenter");
+        CHECK(info[1].name == "datacenter1");
+        CHECK(info[2].name == "srv2");
+        CHECK(info[3].name == "srv3");
+        CHECK(info[4].name == "srv11");
+        CHECK(info[5].name == "srv21");
+    }
+
+    SECTION("Not exists")
+    {
+        cond.value = "wtf";
+        cond.op    = fty::Group::ConditionOp::Is;
+
+        auto g = group.create();
+        auto info = g.resolve();
+
+        REQUIRE(info.size() == 0);
+    }
+
+    CHECK(fty::Storage::clear());
+}
+
 TEST_CASE("Resolve by location")
 {
     REQUIRE(fty::GroupsDB::init());
