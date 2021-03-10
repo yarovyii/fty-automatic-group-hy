@@ -13,6 +13,8 @@ static std::string op(const Group::Condition& cond)
     switch (cond.op) {
         case Group::ConditionOp::Contains:
             return "like";
+        case Group::ConditionOp::DoesNotContain:
+            return "not like";
         case Group::ConditionOp::Is:
             return "=";
         case Group::ConditionOp::IsNot:
@@ -25,7 +27,7 @@ static std::string op(const Group::Condition& cond)
 
 static std::string value(const Group::Condition& cond)
 {
-    if (cond.op == Group::ConditionOp::Contains) {
+    if (cond.op == Group::ConditionOp::Contains || cond.op == Group::ConditionOp::DoesNotContain) {
         return "%{}%"_format(cond.value.value());
     } else {
         return cond.value.value();

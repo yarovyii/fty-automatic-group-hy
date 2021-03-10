@@ -71,19 +71,31 @@ TEST_CASE("Resolve by name")
 
     SECTION("Contains")
     {
-        cond.value = "srv";
+        cond.value = "srv1";
         cond.op    = fty::Group::ConditionOp::Contains;
 
         auto g = group.create();
         auto info = g.resolve();
 
-        REQUIRE(info.size() == 5);
+        REQUIRE(info.size() == 2);
         CHECK(info[0].name == "srv1");
-        CHECK(info[1].name == "srv2");
-        CHECK(info[2].name == "srv3");
         CHECK(info[3].name == "srv11");
-        CHECK(info[4].name == "srv21");
     }
+
+    SECTION("DoesNotContain")
+    {
+        cond.value = "srv1";
+        cond.op    = fty::Group::ConditionOp::DoesNotContain;
+
+        auto g = group.create();
+        auto info = g.resolve();
+
+        REQUIRE(info.size() == 3);
+        CHECK(info[0].name == "srv2");
+        CHECK(info[1].name == "srv3");
+        CHECK(info[3].name == "srv21");
+    }
+
 
     SECTION("Is")
     {
