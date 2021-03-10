@@ -21,6 +21,8 @@
 
 #pragma once
 #include <pack/pack.h>
+#include <list>
+#include <string>
 
 // =====================================================================================================================
 
@@ -56,9 +58,11 @@ public:
         META(Meta, replyTo, from, to, subject, status, timeout, correlationId);
     };
 
+    using Data = pack::StringList;
+
 public:
-    pack::Binary userData = FIELD("user-data");
-    Meta         meta     = FIELD("meta-data");
+    Meta meta     = FIELD("meta-data");
+    Data userData = FIELD("user-data");
 
 public:
     using pack::Node::Node;
@@ -67,6 +71,8 @@ public:
 public:
     explicit Message(const messagebus::Message& msg);
     messagebus::Message toMessageBus() const;
+    void setData(const std::string& data);
+    void setData(const std::list<std::string>& data);
 };
 
 inline std::ostream& operator<<(std::ostream& ss, Message::Status status)

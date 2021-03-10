@@ -30,20 +30,21 @@ unsigned Resolve::run()
     fty::commands::resolve::In in;
     in.id = fty::convert<uint16_t>(*strIdPrt);
 
-    msg.userData.setString(*pack::json::serialize(in));
+    msg.setData(*pack::json::serialize(in));
 
     auto ret = bus.send(fty::Channel, msg);
     if (!ret) {
         throw rest::errors::Internal(ret.error());
     }
 
-    auto info = ret->userData.decode<fty::commands::resolve::Out>();
+    commands::resolve::Out data;
+    auto info = pack::json::deserialize(ret->userData[0], data);
     if (!info) {
         throw rest::errors::Internal(info.error());
     }
 
     std::vector<std::string> out;
-    for(const auto& it: *info) {
+    for(const auto& it: data) {
         std::string json = asset::getJsonAsset(fty::convert<uint32_t>(it.id.value()));
         if (json.empty()) {
             throw rest::errors::Internal("Cannot build asset information");

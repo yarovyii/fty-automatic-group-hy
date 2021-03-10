@@ -1,5 +1,6 @@
 #pragma once
 #include "common/message-bus.h"
+#include <fty_common_dto.h>
 #include <fty/event.h>
 #include <fty/thread-pool.h>
 
@@ -16,6 +17,7 @@ public:
 
 private:
     void process(const Message& msg);
+    void srrProcess(const Message& msg);
     void doStop();
     void reloadConfig();
 
