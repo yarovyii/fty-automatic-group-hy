@@ -31,6 +31,7 @@ struct Group : public pack::Node
         Contact,
         HostName,
         IPAddress,
+        InternalName,
     };
 
     struct Condition : public pack::Node

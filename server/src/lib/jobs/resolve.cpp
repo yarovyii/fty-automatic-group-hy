@@ -57,6 +57,17 @@ static std::string byName(const Group::Condition& cond)
             value {} '{}')"_format(op(cond), value(cond));
 }
 
+static std::string byInternalName(const Group::Condition& cond)
+{
+    return R"(
+        SELECT
+            id_asset_element
+        FROM
+            t_bios_asset_element
+        WHERE
+            name {} '{}')"_format(op(cond), value(cond));
+}
+
 static std::string byContact(const Group::Condition& cond)
 {
     std::string sql = R"(
@@ -255,6 +266,9 @@ static std::string groupSql(tnt::Connection& conn, const Group::Rules& group)
                     break;
                 case Group::Fields::SubType:
                     subQueries.push_back(bySubType(cond));
+                    break;
+                case Group::Fields::InternalName:
+                    subQueries.push_back(byInternalName(cond));
                     break;
                 case Group::Fields::Unknown:
                 default:
