@@ -85,7 +85,7 @@ std::ostream& operator<<(std::ostream& ss, fty::Group::Fields value)
             case fty::Group::Fields::Type:
                 return "type";
             case fty::Group::Fields::InternalName:
-                return "internal-name";
+                return "asset";
             case fty::Group::Fields::Unknown:
                 return "unknown";
         }
@@ -115,7 +115,7 @@ std::istream& operator>>(std::istream& ss, fty::Group::Fields& value)
         value = fty::Group::Fields::Type;
     } else if (strval == "subtype") {
         value = fty::Group::Fields::SubType;
-    } else if (strval == "internal-name") {
+    } else if (strval == "asset") {
         value = fty::Group::Fields::InternalName;
     }
     return ss;
