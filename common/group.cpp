@@ -88,6 +88,8 @@ std::ostream& operator<<(std::ostream& ss, fty::Group::Fields value)
                 return "asset";
             case fty::Group::Fields::HostedBy:
                 return "hosted-by";
+            case fty::Group::Fields::Group:
+                return "group";
             case fty::Group::Fields::Unknown:
                 return "unknown";
         }
@@ -121,6 +123,8 @@ std::istream& operator>>(std::istream& ss, fty::Group::Fields& value)
         value = fty::Group::Fields::InternalName;
     } else if (strval == "hosted-by") {
         value = fty::Group::Fields::HostedBy;
+    } else if (strval == "group") {
+        value = fty::Group::Fields::Group;
     }
     return ss;
 }

@@ -381,7 +381,7 @@ static std::string byHostedBy(const Group::Condition& cond)
     );
     // clang-format on
 }
-
+static std::string byGroupId(tnt::Connection& conn, const Group::Condition& cond);
 // =====================================================================================================================
 
 static std::string groupSql(tnt::Connection& conn, const Group::Rules& group)
@@ -418,6 +418,9 @@ static std::string groupSql(tnt::Connection& conn, const Group::Rules& group)
                 case Group::Fields::HostedBy:
                     subQueries.push_back(byHostedBy(cond));
                     break;
+                case Group::Fields::Group:
+                    subQueries.push_back(byGroupId(conn, cond));
+                    break;
                 case Group::Fields::Unknown:
                 default:
                     throw Error("Unsupported field '{}' in condition", cond.field.value());
@@ -439,6 +442,18 @@ static std::string groupSql(tnt::Connection& conn, const Group::Rules& group)
     )"_format(fty::implode(subQueries, ") " + sqlLogicalOperator(group.groupOp) + " id_asset_element IN ("));
 
     return sql;
+}
+
+static std::string byGroupId(tnt::Connection& conn, const Group::Condition& cond)
+{
+    auto val   = fty::convert<uint64_t, std::string>(cond.value);
+    auto group = Storage::byId(val);
+
+    if (!group) {
+        throw Error(group.error());
+    }
+
+    return groupSql(conn, group->rules);
 }
 
 void Resolve::run(const commands::resolve::In& in, commands::resolve::Out& assetList)

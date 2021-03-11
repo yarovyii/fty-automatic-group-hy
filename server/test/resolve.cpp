@@ -1211,3 +1211,59 @@ TEST_CASE("Resolve by hosted by")
         FAIL(ex.what());
     }
 }
+
+TEST_CASE("Resolve by Group")
+{
+    try {
+        fty::SampleDb db(R"(
+            items:
+                - type : Datacenter
+                  name : datacenter
+                  items:
+                    - type     : Server
+                      name     : srv11
+                      ext-name : srv11
+                - type : Datacenter
+                  name : datacenter1
+                  items:
+                    - type     : Server
+                      name     : srv21
+                      ext-name : srv21
+            )");
+
+        Group group;
+        group.name          = "ByName";
+        group.rules.groupOp = fty::Group::LogicalOp::And;
+
+        Group group1;
+        group1.name          = "EmptyWithLink";
+        group1.rules.groupOp = fty::Group::LogicalOp::And;
+
+        auto& var  = group.rules.conditions.append();
+        auto& cond = var.reset<fty::Group::Condition>();
+        cond.field = fty::Group::Fields::Name;
+
+        cond.value = "srv";
+        cond.op    = fty::Group::ConditionOp::Contains;
+
+        //"Contains"
+        {
+            auto g = group.create();
+
+            auto& var1  = group1.rules.conditions.append();
+            auto& cond1 = var1.reset<fty::Group::Condition>();
+            cond1.field = fty::Group::Fields::Group;
+            cond1.value = fty::convert<std::string, uint64_t>(g.id.value());
+            cond1.op    = fty::Group::ConditionOp::Contains;
+
+            auto g1   = group1.create();
+            auto info = g1.resolve();
+            REQUIRE(info.size() == 2);
+            CHECK(info[0].name == "srv11");
+            CHECK(info[1].name == "srv21");
+        }
+        CHECK(fty::Storage::clear());
+    } catch (const std::exception& ex) {
+        FAIL(ex.what());
+    }
+}
