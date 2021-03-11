@@ -1108,3 +1108,106 @@ TEST_CASE("Resolve by ip address vm")
         FAIL(ex.what());
     }
 }
+
+TEST_CASE("Resolve by hosted by")
+{
+    try {
+        fty::SampleDb db(R"(
+            items:
+                - type : Connector
+                  name : connector
+                - type : InfraService
+                  name : infra
+                - type : Hypervisor
+                  name : hypervisor
+                - type : Hypervisor
+                  name : hypervisor1
+                - type : VirtualMachine
+                  name : vm1
+                - type : VirtualMachine
+                  name : vm2
+                - type : VirtualMachine
+                  name : vm3
+            links:
+                - dest : vm1
+                  src  : hypervisor
+                  type : vmware.esxi.hosts.vm
+                - dest : vm2
+                  src  : hypervisor
+                  type : vmware.esxi.hosts.vm
+                - dest : vm3
+                  src  : hypervisor1
+                  type : vmware.esxi.hosts.vm
+                - dest : hypervisor
+                  src  : infra
+                  type : vmware.vcenter.monitors.esxi
+                - dest : hypervisor1
+                  src  : infra
+                  type : vmware.vcenter.monitors.esxi
+                - dest : infra
+                  src  : connector
+                  type : vmware.connected.to.vcenter
+            )");
+
+        Group group;
+        group.name          = "ByHostedBy";
+        group.rules.groupOp = fty::Group::LogicalOp::And;
+
+        auto& var1  = group.rules.conditions.append();
+        auto& cond1 = var1.reset<fty::Group::Condition>();
+        cond1.field = fty::Group::Fields::HostedBy;
+
+        // Contains
+        {
+            cond1.op    = fty::Group::ConditionOp::Contains;
+            cond1.value = "hypervisor";
+
+            auto g    = group.create();
+            auto info = g.resolve();
+
+            REQUIRE(info.size() == 3);
+            CHECK(info[0].name == "vm1");
+            CHECK(info[1].name == "vm2");
+            CHECK(info[2].name == "vm3");
+        }
+
+        // Is
+        {
+            cond1.op    = fty::Group::ConditionOp::Is;
+            cond1.value = "hypervisor";
+
+            auto g    = group.create();
+            auto info = g.resolve();
+
+            REQUIRE(info.size() == 2);
+            CHECK(info[0].name == "vm1");
+            CHECK(info[1].name == "vm2");
+        }
+
+        // Is not
+        {
+            cond1.op    = fty::Group::ConditionOp::IsNot;
+            cond1.value = "hypervisor";
+
+            auto g    = group.create();
+            auto info = g.resolve();
+
+            REQUIRE(info.size() == 1);
+            CHECK(info[0].name == "vm3");
+        }
+
+        // Wrong
+        {
+            cond1.op    = fty::Group::ConditionOp::Is;
+            cond1.value = "wtf";
+
+            auto g    = group.create();
+            auto info = g.resolve();
+
+            REQUIRE(info.size() == 0);
+        }
+
+    } catch (const std::exception& ex) {
+        FAIL(ex.what());
+    }
+}
