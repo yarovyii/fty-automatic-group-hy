@@ -359,6 +359,31 @@ static std::string byIpAddress(const Group::Condition& cond)
 
 // =====================================================================================================================
 
+static std::string byHostedBy(const Group::Condition& cond)
+{
+    static std::string sql = R"(
+        SELECT l.id_asset_device_dest FROM t_bios_asset_link AS l
+        LEFT JOIN t_bios_asset_element AS e ON e.id_asset_element = l.id_asset_device_src
+        WHERE
+            l.id_asset_link_type IN ({linkTypes}) AND
+            e.id_type = {type} AND
+            e.id_subtype = {subtype} AND
+            e.name {op} '{val}'
+    )";
+
+    // clang-format off
+    return fmt::format(sql,
+        "linkTypes"_a = fty::implode(vmLinkTypes(), ", "),
+        "op"_a        = op(cond),
+        "val"_a = value(cond),
+        "type"_a      = persist::HYPERVISOR,
+        "subtype"_a   = persist::VMWARE_ESXI
+    );
+    // clang-format on
+}
+
+// =====================================================================================================================
+
 static std::string groupSql(tnt::Connection& conn, const Group::Rules& group)
 {
     std::vector<std::string> subQueries;
@@ -389,6 +414,9 @@ static std::string groupSql(tnt::Connection& conn, const Group::Rules& group)
                     break;
                 case Group::Fields::InternalName:
                     subQueries.push_back(byInternalName(cond));
+                    break;
+                case Group::Fields::HostedBy:
+                    subQueries.push_back(byHostedBy(cond));
                     break;
                 case Group::Fields::Unknown:
                 default:
