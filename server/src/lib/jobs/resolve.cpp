@@ -386,6 +386,7 @@ static std::string byGroupId(tnt::Connection& conn, const Group::Condition& cond
 
 static std::string groupSql(tnt::Connection& conn, const Group::Rules& group)
 {
+    std::string              strGroup = "";
     std::vector<std::string> subQueries;
     for (const auto& it : group.conditions) {
         if (it.is<Group::Condition>()) {
@@ -419,6 +420,9 @@ static std::string groupSql(tnt::Connection& conn, const Group::Rules& group)
                     subQueries.push_back(byHostedBy(cond));
                     break;
                 case Group::Fields::Group:
+                    if (cond.op == fty::Group::ConditionOp::IsNot) {
+                        strGroup = "NOT ";
+                    }
                     subQueries.push_back(byGroupId(conn, cond));
                     break;
                 case Group::Fields::Unknown:
@@ -439,7 +443,8 @@ static std::string groupSql(tnt::Connection& conn, const Group::Rules& group)
             id_asset_element as id
         FROM t_bios_asset_element
         WHERE id_asset_element IN ({})
-    )"_format(fty::implode(subQueries, ") " + sqlLogicalOperator(group.groupOp) + " id_asset_element IN ("));
+    )"_format(
+        fty::implode(subQueries, ") " + sqlLogicalOperator(group.groupOp) + " id_asset_element " + strGroup + "IN ("));
 
     return sql;
 }

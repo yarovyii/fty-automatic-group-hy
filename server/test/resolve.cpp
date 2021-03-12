@@ -1229,6 +1229,12 @@ TEST_CASE("Resolve by Group")
                     - type     : Server
                       name     : srv21
                       ext-name : srv21
+                - type : Datacenter
+                  name : datacenter2
+                  items:
+                    - type     : Server
+                      name     : serv
+                      ext-name : serv
             )");
 
         Group group;
@@ -1239,28 +1245,84 @@ TEST_CASE("Resolve by Group")
         group1.name          = "EmptyWithLink";
         group1.rules.groupOp = fty::Group::LogicalOp::And;
 
-        auto& var  = group.rules.conditions.append();
-        auto& cond = var.reset<fty::Group::Condition>();
-        cond.field = fty::Group::Fields::Name;
-
-        cond.value = "srv";
-        cond.op    = fty::Group::ConditionOp::Contains;
-
-        //"Contains"
         {
-            auto g = group.create();
+            auto& var  = group.rules.conditions.append();
+            auto& cond = var.reset<fty::Group::Condition>();
+            cond.field = fty::Group::Fields::Name;
 
             auto& var1  = group1.rules.conditions.append();
             auto& cond1 = var1.reset<fty::Group::Condition>();
-            cond1.field = fty::Group::Fields::Group;
-            cond1.value = fty::convert<std::string, uint64_t>(g.id.value());
-            cond1.op    = fty::Group::ConditionOp::Contains;
+            cond1.field = fty::Group::Fields::Name;
+
+            auto& var2  = group1.rules.conditions.append();
+            auto& cond2 = var2.reset<fty::Group::Condition>();
+            cond2.field = fty::Group::Fields::Group;
+        }
+
+        // And operator | Contains
+        {
+            auto& cond = group.rules.conditions[0].get<fty::Group::Condition>();
+            cond.value = "srv";
+            cond.op    = fty::Group::ConditionOp::Contains;
+
+            auto g = group.create();
+
+            auto& cond1 = group1.rules.conditions[0].get<fty::Group::Condition>();
+            cond1.value = "serv";
+            cond1.op    = fty::Group::ConditionOp::Is;
+
+            auto& cond2 = group1.rules.conditions[1].get<fty::Group::Condition>();
+            cond2.value = fty::convert<std::string, uint64_t>(g.id.value());
+            cond2.op    = fty::Group::ConditionOp::Is;
+
+            auto g1   = group1.create();
+            auto info = g1.resolve();
+            REQUIRE(info.size() == 0);
+        }
+
+        // Does not contain
+        {
+            auto& cond = group.rules.conditions[0].get<fty::Group::Condition>();
+            cond.value = "srv";
+            cond.op    = fty::Group::ConditionOp::Contains;
+
+            auto g = group.create();
+
+            auto& cond1 = group1.rules.conditions[0].get<fty::Group::Condition>();
+            cond1.value = "serv";
+            cond1.op    = fty::Group::ConditionOp::IsNot;
+
+            auto& cond2 = group1.rules.conditions[1].get<fty::Group::Condition>();
+            cond2.value = fty::convert<std::string, uint64_t>(g.id.value());
+            cond2.op    = fty::Group::ConditionOp::Is;
 
             auto g1   = group1.create();
             auto info = g1.resolve();
             REQUIRE(info.size() == 2);
             CHECK(info[0].name == "srv11");
             CHECK(info[1].name == "srv21");
+        }
+
+        // IsNot group
+        {
+            auto& cond = group.rules.conditions[0].get<fty::Group::Condition>();
+            cond.value = "srv2";
+            cond.op    = fty::Group::ConditionOp::Contains;
+
+            auto g = group.create();
+
+            auto& cond1 = group1.rules.conditions[0].get<fty::Group::Condition>();
+            cond1.value = "srv";
+            cond1.op    = fty::Group::ConditionOp::Contains;
+
+            auto& cond2 = group1.rules.conditions[1].get<fty::Group::Condition>();
+            cond2.value = fty::convert<std::string, uint64_t>(g.id.value());
+            cond2.op    = fty::Group::ConditionOp::IsNot;
+
+            auto g1   = group1.create();
+            auto info = g1.resolve();
+            REQUIRE(info.size() == 1);
+            CHECK(info[0].name == "srv11");
         }
         CHECK(fty::Storage::clear());
     } catch (const std::exception& ex) {
