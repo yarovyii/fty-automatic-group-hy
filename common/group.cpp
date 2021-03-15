@@ -29,9 +29,9 @@ std::istream& operator>>(std::istream& ss, fty::Group::ConditionOp& value)
     if (strval == "CONTAINS") {
         value = fty::Group::ConditionOp::Contains;
     } else if (strval == "IS") {
-        value = fty::Group::ConditionOp::DoesNotContain;
-    } else if (strval == "DOESNOTCONTAIN") {
         value = fty::Group::ConditionOp::Is;
+    } else if (strval == "DOESNOTCONTAIN") {
+        value = fty::Group::ConditionOp::DoesNotContain;
     } else if (strval == "ISNOT") {
         value = fty::Group::ConditionOp::IsNot;
     } else {
