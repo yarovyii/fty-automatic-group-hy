@@ -151,6 +151,9 @@ static Expected<void, fty::Translate> checkRules(const Group::Rules& rule)
             if (!val.value.hasValue()) {
                 return unexpected("Value of condition is expected"_tr);
             }
+            if (val.field == Group::Fields::Group && val.op != fty::Group::ConditionOp::IsNot && val.op != fty::Group::ConditionOp::Is) {
+                return unexpected("Valid value of condition for linked group is expected"_tr);
+            }
         } else if (cond.is<Group::Rules>()) {
             if (auto ret = checkRules(cond.get<Group::Rules>()); !ret) {
                 return unexpected(ret.error());

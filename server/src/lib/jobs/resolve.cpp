@@ -384,18 +384,30 @@ static std::string byHostedBy(const Group::Condition& cond)
 static std::string byGroupId(tnt::Connection& conn, const Group::Condition& cond);
 // =====================================================================================================================
 
-std::string getNot(bool& var)
+std::string implodeLinkedGroups(
+    const Group::Rules& group, const std::vector<std::string>& subQueries, const std::vector<size_t> indexesGroups)
 {
-    if (!var) {
-        var = true;
-        return " NOT";
+    std::stringstream ss;
+    bool              first = true;
+    auto              it    = indexesGroups.begin();
+    for (size_t i = 0; i < subQueries.size(); i++) {
+        if (!first) {
+            if (i != *it) {
+                ss << ") " + sqlLogicalOperator(group.groupOp) + " id_asset_element IN (";
+            } else {
+                ss << ") " + sqlLogicalOperator(group.groupOp) + " id_asset_element NOT IN (";
+                it++;
+            }
+        }
+        first = false;
+        ss << subQueries.at(i);
     }
-    return "";
+    return ss.str();
 }
 
 static std::string groupSql(tnt::Connection& conn, const Group::Rules& group)
 {
-    bool                     groupBool = true;
+    std::vector<size_t>      indexesGroups;
     std::vector<std::string> subQueries;
     for (const auto& it : group.conditions) {
         if (it.is<Group::Condition>()) {
@@ -429,10 +441,10 @@ static std::string groupSql(tnt::Connection& conn, const Group::Rules& group)
                     subQueries.push_back(byHostedBy(cond));
                     break;
                 case Group::Fields::Group:
-                    if (cond.op == fty::Group::ConditionOp::IsNot) {
-                        groupBool = false;
-                    }
                     subQueries.push_back(byGroupId(conn, cond));
+                    if (cond.op == fty::Group::ConditionOp::IsNot) {
+                        indexesGroups.push_back(subQueries.size() - 1);
+                    }
                     break;
                 case Group::Fields::Unknown:
                 default:
@@ -446,14 +458,23 @@ static std::string groupSql(tnt::Connection& conn, const Group::Rules& group)
     if (subQueries.empty()) {
         throw Error("Request is empty");
     }
+    std::string sql;
 
-    std::string sql = R"(
+    if (indexesGroups.size() != 0) {
+        sql = R"(
         SELECT
             id_asset_element as id
         FROM t_bios_asset_element
         WHERE id_asset_element IN ({})
-    )"_format(fty::implode(
-        subQueries, ") " + sqlLogicalOperator(group.groupOp) + " id_asset_element" + getNot(groupBool) + " IN ("));
+    )"_format(implodeLinkedGroups(group, subQueries, indexesGroups));
+    } else {
+        sql = R"(
+        SELECT
+            id_asset_element as id
+        FROM t_bios_asset_element
+        WHERE id_asset_element IN ({})
+    )"_format(fty::implode(subQueries, ") " + sqlLogicalOperator(group.groupOp) + " id_asset_element IN ("));
+    }
 
     return sql;
 }
@@ -467,11 +488,7 @@ static std::string byGroupId(tnt::Connection& conn, const Group::Condition& cond
         throw Error(group.error());
     }
 
-    if (cond.op == fty::Group::ConditionOp::IsNot || cond.op == fty::Group::ConditionOp::Is) {
-        return groupSql(conn, group->rules);
-    }
-
-    return "";
+    return groupSql(conn, group->rules);
 }
 
 void Resolve::run(const commands::resolve::In& in, commands::resolve::Out& assetList)

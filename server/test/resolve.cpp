@@ -1355,6 +1355,47 @@ TEST_CASE("Resolve by Group")
             REQUIRE(info.size() == 1);
             CHECK(info[0].name == "servsrv");
         }
+
+        // IsNot with two linked groups
+        {
+            Group groupTmp;
+            groupTmp.name          = "tmp";
+            groupTmp.rules.groupOp = fty::Group::LogicalOp::And;
+
+            auto& groupMock = groupTmp.rules.conditions.append();
+            auto& condMock  = groupMock.reset<fty::Group::Condition>();
+            condMock.field  = fty::Group::Fields::Name;
+
+            condMock       = groupTmp.rules.conditions[0].get<fty::Group::Condition>();
+            condMock.value = "srv21";
+            condMock.op    = fty::Group::ConditionOp::Contains;
+
+            auto gTmp = groupTmp.create();
+
+            // Creating with two link group
+            auto& condName = group1.rules.conditions[0].get<fty::Group::Condition>();
+            condName.value = "s";
+            condName.op    = fty::Group::ConditionOp::Contains;
+
+            auto& condGroupLink = group1.rules.conditions[1].get<fty::Group::Condition>();
+            condGroupLink.value = fty::convert<std::string, uint64_t>(gTmp.id.value());
+            condGroupLink.op    = fty::Group::ConditionOp::IsNot;
+
+            // second
+            auto& groupGroupLink = group1.rules.conditions.append();
+            auto& condGroupLink1  = groupGroupLink.reset<fty::Group::Condition>();
+            condGroupLink1.field  = fty::Group::Fields::Group;
+
+            condGroupLink1 = group1.rules.conditions[2].get<fty::Group::Condition>();
+            condGroupLink1.value = fty::convert<std::string, uint64_t>(g.id.value());
+            condGroupLink1.op    = fty::Group::ConditionOp::IsNot;
+
+            auto g1   = group1.create();
+            auto info = g1.resolve();
+
+            REQUIRE(info.size() == 1);
+            CHECK(info[0].name == "serv");
+        }
         g.remove();
         CHECK(fty::Storage::clear());
     } catch (const std::exception& ex) {
