@@ -384,9 +384,18 @@ static std::string byHostedBy(const Group::Condition& cond)
 static std::string byGroupId(tnt::Connection& conn, const Group::Condition& cond);
 // =====================================================================================================================
 
+std::string getNot(bool& var)
+{
+    if (!var) {
+        var = true;
+        return " NOT";
+    }
+    return "";
+}
+
 static std::string groupSql(tnt::Connection& conn, const Group::Rules& group)
 {
-    std::string              strGroup = "";
+    bool                     groupBool = true;
     std::vector<std::string> subQueries;
     for (const auto& it : group.conditions) {
         if (it.is<Group::Condition>()) {
@@ -421,7 +430,7 @@ static std::string groupSql(tnt::Connection& conn, const Group::Rules& group)
                     break;
                 case Group::Fields::Group:
                     if (cond.op == fty::Group::ConditionOp::IsNot) {
-                        strGroup = "NOT ";
+                        groupBool = false;
                     }
                     subQueries.push_back(byGroupId(conn, cond));
                     break;
@@ -443,8 +452,8 @@ static std::string groupSql(tnt::Connection& conn, const Group::Rules& group)
             id_asset_element as id
         FROM t_bios_asset_element
         WHERE id_asset_element IN ({})
-    )"_format(
-        fty::implode(subQueries, ") " + sqlLogicalOperator(group.groupOp) + " id_asset_element " + strGroup + "IN ("));
+    )"_format(fty::implode(
+        subQueries, ") " + sqlLogicalOperator(group.groupOp) + " id_asset_element" + getNot(groupBool) + " IN ("));
 
     return sql;
 }
@@ -458,7 +467,11 @@ static std::string byGroupId(tnt::Connection& conn, const Group::Condition& cond
         throw Error(group.error());
     }
 
-    return groupSql(conn, group->rules);
+    if (cond.op == fty::Group::ConditionOp::IsNot || cond.op == fty::Group::ConditionOp::Is) {
+        return groupSql(conn, group->rules);
+    }
+
+    return "";
 }
 
 void Resolve::run(const commands::resolve::In& in, commands::resolve::Out& assetList)
