@@ -390,13 +390,13 @@ static std::string groupSql(tnt::Connection& conn, const Group::Rules& group)
     {
         std::string query;
         std::string op;
-        SubQuery(std::string q, std::string o = "IN")
+        SubQuery(const std::string& q, const std::string& o = "IN")
             : query(q)
             , op(o)
         {
         }
     };
-    
+
     std::vector<SubQuery> subQueries;
     for (const auto& it : group.conditions) {
         if (it.is<Group::Condition>()) {
@@ -449,10 +449,10 @@ static std::string groupSql(tnt::Connection& conn, const Group::Rules& group)
         throw Error("Request is empty");
     }
 
-    auto lambdaImplode = [&]() {
+    const auto & lambdaImplode = [&]() {
         std::stringstream ss;
         bool              first = true;
-        for (auto query : subQueries) {
+        for (const auto& query : subQueries) {
             if (!first) {
                 ss << ") " + sqlLogicalOperator(group.groupOp) + " id_asset_element " + query.op + " (";
             }
