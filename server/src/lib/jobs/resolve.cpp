@@ -384,66 +384,56 @@ static std::string byHostedBy(const Group::Condition& cond)
 static std::string byGroupId(tnt::Connection& conn, const Group::Condition& cond);
 // =====================================================================================================================
 
-std::string implodeLinkedGroups(
-    const Group::Rules& group, const std::vector<std::string>& subQueries, const std::vector<size_t> indexesGroups)
-{
-    std::stringstream ss;
-    bool              first = true;
-    auto              it    = indexesGroups.begin();
-    for (size_t i = 0; i < subQueries.size(); i++) {
-        if (!first) {
-            if (i != *it) {
-                ss << ") " + sqlLogicalOperator(group.groupOp) + " id_asset_element IN (";
-            } else {
-                ss << ") " + sqlLogicalOperator(group.groupOp) + " id_asset_element NOT IN (";
-                it++;
-            }
-        }
-        first = false;
-        ss << subQueries.at(i);
-    }
-    return ss.str();
-}
-
 static std::string groupSql(tnt::Connection& conn, const Group::Rules& group)
 {
-    std::vector<size_t>      indexesGroups;
-    std::vector<std::string> subQueries;
+    struct SubQuery
+    {
+        std::string query;
+        std::string op;
+        SubQuery(std::string q, std::string o = "IN")
+            : query(q)
+            , op(o)
+        {
+        }
+    };
+    
+    std::vector<SubQuery> subQueries;
     for (const auto& it : group.conditions) {
         if (it.is<Group::Condition>()) {
             const auto& cond = it.get<Group::Condition>();
             switch (cond.field) {
                 case Group::Fields::Contact:
-                    subQueries.push_back(byContact(cond));
+                    subQueries.emplace_back(byContact(cond));
                     break;
                 case Group::Fields::HostName:
-                    subQueries.push_back(byHostName(cond));
+                    subQueries.emplace_back(byHostName(cond));
                     break;
                 case Group::Fields::IPAddress:
-                    subQueries.push_back(byIpAddress(cond));
+                    subQueries.emplace_back(byIpAddress(cond));
                     break;
                 case Group::Fields::Location:
-                    subQueries.push_back(byLocation(conn, cond));
+                    subQueries.emplace_back(byLocation(conn, cond));
                     break;
                 case Group::Fields::Name:
-                    subQueries.push_back(byName(cond));
+                    subQueries.emplace_back(byName(cond));
                     break;
                 case Group::Fields::Type:
-                    subQueries.push_back(byType(cond));
+                    subQueries.emplace_back(byType(cond));
                     break;
                 case Group::Fields::SubType:
-                    subQueries.push_back(bySubType(cond));
+                    subQueries.emplace_back(bySubType(cond));
                     break;
                 case Group::Fields::InternalName:
-                    subQueries.push_back(byInternalName(cond));
+                    subQueries.emplace_back(byInternalName(cond));
                     break;
                 case Group::Fields::HostedBy:
-                    subQueries.push_back(byHostedBy(cond));
+                    subQueries.emplace_back(byHostedBy(cond));
                     break;
                 case Group::Fields::Group:
-                    subQueries.push_back(byGroupId(conn, cond));
                     if (cond.op == fty::Group::ConditionOp::IsNot) {
-                        indexesGroups.push_back(subQueries.size() - 1);
+                        subQueries.emplace_back(byGroupId(conn, cond), "NOT IN");
+                    } else {
+                        subQueries.emplace_back(byGroupId(conn, cond));
                     }
                     break;
                 case Group::Fields::Unknown:
@@ -451,32 +441,33 @@ static std::string groupSql(tnt::Connection& conn, const Group::Rules& group)
                     throw Error("Unsupported field '{}' in condition", cond.field.value());
             }
         } else {
-            subQueries.push_back(groupSql(conn, it.get<Group::Rules>()));
+            subQueries.emplace_back(groupSql(conn, it.get<Group::Rules>()));
         }
     }
 
     if (subQueries.empty()) {
         throw Error("Request is empty");
     }
-    std::string sql;
 
-    if (indexesGroups.size() != 0) {
-        sql = R"(
-        SELECT
-            id_asset_element as id
-        FROM t_bios_asset_element
-        WHERE id_asset_element IN ({})
-    )"_format(implodeLinkedGroups(group, subQueries, indexesGroups));
-    } else {
-        sql = R"(
-        SELECT
-            id_asset_element as id
-        FROM t_bios_asset_element
-        WHERE id_asset_element IN ({})
-    )"_format(fty::implode(subQueries, ") " + sqlLogicalOperator(group.groupOp) + " id_asset_element IN ("));
-    }
+    auto lambdaImplode = [&]() {
+        std::stringstream ss;
+        bool              first = true;
+        for (auto query : subQueries) {
+            if (!first) {
+                ss << ") " + sqlLogicalOperator(group.groupOp) + " id_asset_element " + query.op + " (";
+            }
+            first = false;
+            ss << query.query;
+        }
+        return ss.str();
+    };
 
-    return sql;
+    return R"(
+       SELECT
+           id_asset_element as id
+       FROM t_bios_asset_element
+       WHERE id_asset_element IN ({})
+   )"_format(lambdaImplode());
 }
 
 static std::string byGroupId(tnt::Connection& conn, const Group::Condition& cond)
