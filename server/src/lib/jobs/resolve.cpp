@@ -449,7 +449,7 @@ static std::string groupSql(tnt::Connection& conn, const Group::Rules& group)
         throw Error("Request is empty");
     }
 
-    const auto & lambdaImplode = [&]() {
+    auto lambdaImplode = [&]() {
         std::stringstream ss;
         bool              first = true;
         for (const auto& query : subQueries) {
