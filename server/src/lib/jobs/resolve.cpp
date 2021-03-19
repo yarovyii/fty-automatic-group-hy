@@ -103,7 +103,7 @@ static std::string byInternalName(const Group::Condition& cond)
 static std::string byContact(const Group::Condition& cond)
 {
     std::string tmpOp = op(cond);
-    std::string sql = R"(
+    std::string sql   = R"(
         SELECT id_asset_element
         FROM t_bios_asset_ext_attributes
         WHERE (keytag='device.contact' OR keytag='contact_email') AND
@@ -216,7 +216,8 @@ static std::string byLocation(tnt::Connection& conn, const Group::Condition& con
 
 static std::string byHostName(const Group::Condition& cond)
 {
-    auto byDevice = [&]() {
+    std::string tmpOp    = op(cond);
+    auto        byDevice = [&]() {
         std::string sql = R"(
             SELECT e.id_asset_element
             FROM t_bios_asset_element AS e
@@ -224,17 +225,18 @@ static std::string byHostName(const Group::Condition& cond)
             WHERE a.keytag='hostname.1' AND e.id_type = {type} AND
                   a.value {op} '{val}')";
 
-        if (cond.op == Group::ConditionOp::IsNot) {
+        if (cond.op == Group::ConditionOp::IsNot || cond.op == Group::ConditionOp::DoesNotContain) {
             sql =
                 "SELECT id_asset_element FROM t_bios_asset_element \
                    WHERE id_type = {type} AND id_asset_element NOT IN (" +
                 sql + ")";
+            tmpOp = cond.op != Group::ConditionOp::IsNot ? "like" : "=";
         }
 
         // clang-format off
         return fmt::format(sql,
             "type"_a = persist::DEVICE,
-            "op"_a   = cond.op != Group::ConditionOp::IsNot ? op(cond) : "=",
+            "op"_a   = tmpOp,
             "val"_a  = value(cond)
         );
         // clang-format on
@@ -291,8 +293,15 @@ static std::string byIpAddress(const Group::Condition& cond)
                     ret.push_back("a.value LIKE '{}%'"_format(pre));
                 }
             } else {
-                std::string sop   = cond.op == Group::ConditionOp::IsNot ? "=" : op(cond);
-                std::string saddr = cond.op == Group::ConditionOp::Contains ? "%" + addr + "%" : addr;
+                std::string sop;
+                std::string saddr;
+                if (cond.op == Group::ConditionOp::DoesNotContain) {
+                    sop   = "like";
+                    saddr = "%" + addr + "%";
+                } else {
+                    sop   = cond.op == Group::ConditionOp::IsNot ? "=" : op(cond);
+                    saddr = cond.op == Group::ConditionOp::Contains ? "%" + addr + "%" : addr;
+                }
                 if (isVirt) {
                     ret.push_back("a.value {} '[/{},]'"_format(sop, saddr));
                 } else {

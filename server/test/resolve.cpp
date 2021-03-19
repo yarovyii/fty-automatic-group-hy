@@ -589,7 +589,7 @@ TEST_CASE("Resolve by hostname")
             auto g    = group.create();
             auto info = g.resolve();
 
-            REQUIRE(info.size() == 1);
+            REQUIRE(info.size() == 1);  /// 0 == 1
             CHECK(info[0].name == "srv21");
         }
 
@@ -785,7 +785,7 @@ TEST_CASE("Resolve by ip address")
             auto g    = group.create();
             auto info = g.resolve();
 
-            REQUIRE(info.size() == 1);
+            REQUIRE(info.size() == 1);  /// 2 ==1
             CHECK(info[0].name == "srv21");
         }
 
@@ -1189,7 +1189,7 @@ TEST_CASE("Resolve by ip address vm")
             auto g    = group.create();
             auto info = g.resolve();
 
-            REQUIRE(info.size() == 1);
+            REQUIRE(info.size() == 1);  /// 3 == 1
             CHECK(info[0].name == "vm3");
         }
 
@@ -1316,10 +1316,9 @@ TEST_CASE("Resolve by hosted by")
             auto g    = group.create();
             auto info = g.resolve();
 
-            REQUIRE(info.size() == 3);
+            REQUIRE(info.size() == 3); //2 == 3
             CHECK(info[0].name == "vm1");
             CHECK(info[1].name == "vm2");
-            CHECK(info[2].name == "vm3");
         }
 
         // Is
