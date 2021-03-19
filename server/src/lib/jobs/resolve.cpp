@@ -102,22 +102,24 @@ static std::string byInternalName(const Group::Condition& cond)
 
 static std::string byContact(const Group::Condition& cond)
 {
+    std::string tmpOp = op(cond);
     std::string sql = R"(
         SELECT id_asset_element
         FROM t_bios_asset_ext_attributes
         WHERE (keytag='device.contact' OR keytag='contact_email') AND
               value {op} '{val}')";
 
-    if (cond.op == Group::ConditionOp::IsNot) {
+    if (cond.op == Group::ConditionOp::IsNot || cond.op == Group::ConditionOp::DoesNotContain) {
         sql =
             "SELECT id_asset_element FROM t_bios_asset_element \
              WHERE id_asset_element NOT IN (" +
             sql + ")";
+        tmpOp = cond.op != Group::ConditionOp::IsNot ? "like" : "=";
     }
 
     // clang-format off
     return fmt::format(sql,
-        "op"_a  = cond.op != Group::ConditionOp::IsNot ? op(cond) : "=",
+        "op"_a  = tmpOp,
         "val"_a = value(cond)
     );
     // clang-format on
