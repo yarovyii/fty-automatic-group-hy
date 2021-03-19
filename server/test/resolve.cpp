@@ -401,6 +401,7 @@ TEST_CASE("Resolve by type")
             CHECK(info[0].name == "datacenter");
             CHECK(info[1].name == "datacenter1");
         }
+        
 
         // Is
         {
