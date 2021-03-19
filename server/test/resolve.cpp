@@ -384,7 +384,6 @@ TEST_CASE("Resolve by type")
     }
 }
 
-
 TEST_CASE("Resolve by subtype")
 {
     try {
