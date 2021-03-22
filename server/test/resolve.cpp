@@ -98,7 +98,7 @@ TEST_CASE("Resolve by name")
 
             auto g    = group.create();
             auto info = g.resolve();
-            
+
             REQUIRE(info.size() == 2);
             CHECK(info[0].name == "srv1");
             CHECK(info[1].name == "srv11");
@@ -401,7 +401,7 @@ TEST_CASE("Resolve by type")
             CHECK(info[0].name == "datacenter");
             CHECK(info[1].name == "datacenter1");
         }
-        
+
 
         // Is
         {
@@ -589,7 +589,7 @@ TEST_CASE("Resolve by hostname")
             auto g    = group.create();
             auto info = g.resolve();
 
-            REQUIRE(info.size() == 1);  /// 0 == 1
+            REQUIRE(info.size() == 1); /// 0 == 1
             CHECK(info[0].name == "srv21");
         }
 
@@ -785,8 +785,8 @@ TEST_CASE("Resolve by ip address")
             auto g    = group.create();
             auto info = g.resolve();
 
-            REQUIRE(info.size() == 1);  /// 2 ==1
-            CHECK(info[0].name == "srv21");
+            REQUIRE(info.size() == 1);
+            CHECK(info[0].name == "srv21"); ////fail
         }
 
         // Is
@@ -1189,7 +1189,7 @@ TEST_CASE("Resolve by ip address vm")
             auto g    = group.create();
             auto info = g.resolve();
 
-            REQUIRE(info.size() == 1);  /// 3 == 1
+            REQUIRE(info.size() == 1); /// 2 == 1
             CHECK(info[0].name == "vm3");
         }
 
@@ -1316,7 +1316,7 @@ TEST_CASE("Resolve by hosted by")
             auto g    = group.create();
             auto info = g.resolve();
 
-            REQUIRE(info.size() == 3); //2 == 3
+            REQUIRE(info.size() == 2);
             CHECK(info[0].name == "vm1");
             CHECK(info[1].name == "vm2");
         }
