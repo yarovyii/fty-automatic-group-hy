@@ -1211,6 +1211,105 @@ TEST_CASE("Resolve by hosted by")
     }
 }
 
+struct GroupsData : pack::Node
+{
+    struct Condition : pack::Node
+    {
+        pack::String field = FIELD("field");
+        pack::String op    = FIELD("operator");
+        pack::String value = FIELD("value");
+
+        using pack::Node::Node;
+        META(Condition, field, op, value);
+    };
+
+    struct Item : pack::Node
+    {
+        pack::String                name  = FIELD("name");
+        pack::String                op    = FIELD("operator");
+        pack::ObjectList<Condition> rules = FIELD("rules");
+
+        using pack::Node::Node;
+        META(Item, name, op, rules);
+    };
+
+
+    pack::ObjectList<Item> items = FIELD("items");
+
+    using pack::Node::Node;
+    META(GroupsData, items);
+
+    std::vector<Group> groups;
+    GroupsData(const std::string& data);
+
+    Group& group(const std::string name, uint64_t id = 0, bool numExist = false);
+};
+
+GroupsData::GroupsData(const std::string& data)
+{
+    if (auto ret = pack::yaml::deserialize(data, *this); !ret) {
+        throw std::runtime_error(ret.error());
+    }
+
+    for (const auto& item : items) {
+        groups.emplace_back(Group());
+        auto& g = groups.back();
+        g.name  = item.name.value();
+
+        {
+            fty::Group::LogicalOp opEnum;
+            std::stringstream     ss;
+            ss << item.op.value();
+            ss >> opEnum;
+            g.rules.groupOp = opEnum;
+        }
+
+        int it = 0;
+        for (const auto& condition : item.rules) {
+            auto& group = g.rules.conditions.append();
+            auto& cond  = group.reset<fty::Group::Condition>();
+
+            {
+                fty::Group::Fields fieldEnum;
+                std::stringstream  ss;
+                ss << condition.field.value();
+                ss >> fieldEnum;
+                cond.field = fieldEnum;
+            }
+
+            {
+                fty::Group::ConditionOp condOpEnum;
+                std::stringstream       ss;
+                ss << condition.op.value();
+                ss >> condOpEnum;
+                cond.op = condOpEnum;
+            }
+
+            cond       = g.rules.conditions[it++].get<fty::Group::Condition>();
+            cond.value = condition.value;
+        }
+    }
+}
+
+Group& GroupsData::group(const std::string name, uint64_t id, bool numExist)
+{
+    for (auto& groupIn : groups) {
+        if (groupIn.name.value() == name) {
+            if (numExist) {
+                for (auto& condition : groupIn.rules.conditions) {
+                    auto& cond = condition.get<fty::Group::Condition>();
+                    if (cond.field == fty::Group::Fields::Group) {
+                        cond.value = fty::convert<std::string, uint64_t>(id);
+                        std::cerr << cond.value.value() << std::endl;
+                    }
+                }
+            }
+            return groupIn;
+        }
+    }
+    throw std::runtime_error("Group does not exist");
+}
+
 TEST_CASE("Resolve by Group")
 {
     try {
@@ -1239,60 +1338,48 @@ TEST_CASE("Resolve by Group")
                       ext-name : servsrv
             )");
 
-        Group group;
-        group.name          = "ByName";
-        group.rules.groupOp = fty::Group::LogicalOp::And;
+        GroupsData allGroups(R"(
+            items:
+              - name : ByName
+                operator : AND
+                rules : 
+                  - field : name
+                    operator : CONTAINS
+                    value : srv
+              - name : WithLink
+                operator : AND
+                rules : 
+                  - field : name
+                    operator : IS
+                    value : serv
+                  - field : group
+                    operator : IS
+                    value : ByName
+              - name : LinkTmp
+                operator : AND
+                rules : 
+                  - field : name
+                    operator : CONTAINS
+                    value : srv21
+            )");
 
-        Group group1;
-        group1.name          = "EmptyWithLink";
-        group1.rules.groupOp = fty::Group::LogicalOp::And;
-
-        {
-            auto& groupMock = group.rules.conditions.append();
-            auto& condMock  = groupMock.reset<fty::Group::Condition>();
-            condMock.field  = fty::Group::Fields::Name;
-
-            condMock       = group.rules.conditions[0].get<fty::Group::Condition>();
-            condMock.value = "srv";
-            condMock.op    = fty::Group::ConditionOp::Contains;
-
-            auto& groupName = group1.rules.conditions.append();
-            auto& condName  = groupName.reset<fty::Group::Condition>();
-            condName.field  = fty::Group::Fields::Name;
-
-            auto& groupGroupLink = group1.rules.conditions.append();
-            auto& condGroupLink  = groupGroupLink.reset<fty::Group::Condition>();
-            condGroupLink.field  = fty::Group::Fields::Group;
-        }
-        auto g = group.create();
+        auto groupName = allGroups.group("ByName").create();
 
         // And operator | Contains
         {
-            auto& condName = group1.rules.conditions[0].get<fty::Group::Condition>();
-            condName.value = "serv";
-            condName.op    = fty::Group::ConditionOp::Is;
-
-            auto& condGroupLink = group1.rules.conditions[1].get<fty::Group::Condition>();
-            condGroupLink.value = fty::convert<std::string, uint64_t>(g.id.value());
-            condGroupLink.op    = fty::Group::ConditionOp::Is;
-
-            auto g1   = group1.create();
-            auto info = g1.resolve();
+            auto g    = allGroups.group("WithLink", groupName.id.value(), true).create();
+            auto info = g.resolve();
             REQUIRE(info.size() == 0);
         }
 
         // IsNot in group
         {
-            auto& condName = group1.rules.conditions[0].get<fty::Group::Condition>();
-            condName.value = "serv";
-            condName.op    = fty::Group::ConditionOp::IsNot;
+            auto& group = allGroups.group("WithLink", groupName.id.value(), true);
+            auto& cond  = group.rules.conditions[0].get<fty::Group::Condition>();
+            cond.op     = fty::Group::ConditionOp::IsNot;
 
-            auto& condGroupLink = group1.rules.conditions[1].get<fty::Group::Condition>();
-            condGroupLink.value = fty::convert<std::string, uint64_t>(g.id.value());
-            condGroupLink.op    = fty::Group::ConditionOp::Is;
-
-            auto g1   = group1.create();
-            auto info = g1.resolve();
+            auto g    = group.create();
+            auto info = g.resolve();
             REQUIRE(info.size() == 3);
             CHECK(info[0].name == "srv11");
             CHECK(info[1].name == "srv21");
@@ -1301,101 +1388,50 @@ TEST_CASE("Resolve by Group")
 
         // IsNot group
         {
-            auto& condName = group1.rules.conditions[0].get<fty::Group::Condition>();
-            condName.value = "serv";
+            auto& group = allGroups.group("WithLink", groupName.id.value(), true);
+
+            auto& condName = group.rules.conditions[0].get<fty::Group::Condition>();
             condName.op    = fty::Group::ConditionOp::Contains;
 
-            auto& condGroupLink = group1.rules.conditions[1].get<fty::Group::Condition>();
-            condGroupLink.value = fty::convert<std::string, uint64_t>(g.id.value());
+            auto& condGroupLink = group.rules.conditions[1].get<fty::Group::Condition>();
             condGroupLink.op    = fty::Group::ConditionOp::IsNot;
 
-            auto g1   = group1.create();
-            auto info = g1.resolve();
+            auto g    = group.create();
+            auto info = g.resolve();
             REQUIRE(info.size() == 1);
             CHECK(info[0].name == "serv");
-        }
-
-        // IsNot group with different operation in linked group
-        {
-            Group groupTmp;
-            groupTmp.name          = "tmp";
-            groupTmp.rules.groupOp = fty::Group::LogicalOp::And;
-
-            auto& groupMock = groupTmp.rules.conditions.append();
-            auto& condMock  = groupMock.reset<fty::Group::Condition>();
-            condMock.field  = fty::Group::Fields::Name;
-
-            condMock       = groupTmp.rules.conditions[0].get<fty::Group::Condition>();
-            condMock.value = "srv";
-            condMock.op    = fty::Group::ConditionOp::Contains;
-
-            auto& groupMock1 = groupTmp.rules.conditions.append();
-            auto& condMock1  = groupMock1.reset<fty::Group::Condition>();
-            condMock1.field  = fty::Group::Fields::Name;
-
-            condMock1       = groupTmp.rules.conditions[1].get<fty::Group::Condition>();
-            condMock1.value = "servsrv";
-            condMock1.op    = fty::Group::ConditionOp::IsNot;
-
-            auto gTmp = groupTmp.create();
-
-            // Creating with link group
-            auto& condName = group1.rules.conditions[0].get<fty::Group::Condition>();
-            condName.value = "srv";
-            condName.op    = fty::Group::ConditionOp::Contains;
-
-            auto& condGroupLink = group1.rules.conditions[1].get<fty::Group::Condition>();
-            condGroupLink.value = fty::convert<std::string, uint64_t>(gTmp.id.value());
-            condGroupLink.op    = fty::Group::ConditionOp::IsNot;
-
-            auto g1   = group1.create();
-            auto info = g1.resolve();
-
-            REQUIRE(info.size() == 1);
-            CHECK(info[0].name == "servsrv");
         }
 
         // IsNot with two linked groups
         {
-            Group groupTmp;
-            groupTmp.name          = "tmp";
-            groupTmp.rules.groupOp = fty::Group::LogicalOp::And;
+            auto groupTmp = allGroups.group("LinkTmp").create();
 
-            auto& groupMock = groupTmp.rules.conditions.append();
-            auto& condMock  = groupMock.reset<fty::Group::Condition>();
-            condMock.field  = fty::Group::Fields::Name;
+            auto& group = allGroups.group("WithLink", groupName.id.value(), true);
 
-            condMock       = groupTmp.rules.conditions[0].get<fty::Group::Condition>();
-            condMock.value = "srv21";
-            condMock.op    = fty::Group::ConditionOp::Contains;
-
-            auto gTmp = groupTmp.create();
-
-            // Creating with two link group
-            auto& condName = group1.rules.conditions[0].get<fty::Group::Condition>();
+            auto& condName = group.rules.conditions[0].get<fty::Group::Condition>();
             condName.value = "s";
             condName.op    = fty::Group::ConditionOp::Contains;
 
-            auto& condGroupLink = group1.rules.conditions[1].get<fty::Group::Condition>();
-            condGroupLink.value = fty::convert<std::string, uint64_t>(gTmp.id.value());
+            auto& condGroupLink = group.rules.conditions[1].get<fty::Group::Condition>();
             condGroupLink.op    = fty::Group::ConditionOp::IsNot;
 
-            // second
-            auto& groupGroupLink = group1.rules.conditions.append();
-            auto& condGroupLink1  = groupGroupLink.reset<fty::Group::Condition>();
-            condGroupLink1.field  = fty::Group::Fields::Group;
+            // second link create
+            auto& groupGroupLink = group.rules.conditions.append();
+            auto& condGroupLink1 = groupGroupLink.reset<fty::Group::Condition>();
+            condGroupLink1.field = fty::Group::Fields::Group;
 
-            condGroupLink1 = group1.rules.conditions[2].get<fty::Group::Condition>();
-            condGroupLink1.value = fty::convert<std::string, uint64_t>(g.id.value());
+            condGroupLink1       = group.rules.conditions[2].get<fty::Group::Condition>();
+            condGroupLink1.value = fty::convert<std::string, uint64_t>(groupTmp.id.value());
             condGroupLink1.op    = fty::Group::ConditionOp::IsNot;
 
-            auto g1   = group1.create();
+            auto g1   = group.create();
             auto info = g1.resolve();
 
             REQUIRE(info.size() == 1);
             CHECK(info[0].name == "serv");
         }
-        g.remove();
+
+        groupName.remove();
         CHECK(fty::Storage::clear());
     } catch (const std::exception& ex) {
         FAIL(ex.what());
