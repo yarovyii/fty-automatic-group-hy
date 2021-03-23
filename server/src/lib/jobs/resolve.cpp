@@ -457,7 +457,7 @@ static std::string groupSql(tnt::Connection& conn, const Group::Rules& group)
                 ss << ") " + sqlLogicalOperator(group.groupOp) + " id_asset_element " + query.op + " (";
             }
             first = false;
-            ss << query.query;g
+            ss << query.query;
         }
         return ss.str();
     };
