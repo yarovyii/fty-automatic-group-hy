@@ -164,27 +164,29 @@ static std::string byLocation(tnt::Connection& conn, const Group::Condition& con
     std::string dcSql = R"(
         SELECT id_asset_element
         FROM t_bios_asset_element
-        WHERE id_type={datacenter} AND name {op} '{val}')";
+        WHERE id_type in ({avail}) AND name {op} '{val}' AND name <> 'rackcontroller-0')";
 
+    std::vector<int> avail = {persist::DATACENTER, persist::ROW, persist::RACK, persist::ROOM};
     // clang-format off
     dcSql = fmt::format(dcSql,
-        "datacenter"_a = persist::DATACENTER,
-        "op"_a         = op(cond),
-        "val"_a        = value(cond)
+        "avail"_a = fty::implode(avail, ", "),
+        "op"_a    = cond.op != Group::ConditionOp::IsNot ? op(cond) : "=",
+        "val"_a   = value(cond)
     );
     // clang-format on
 
     try {
         std::vector<int64_t> ids;
         // Select all ids for location
-        for (const auto& row : conn.select(dcSql)) {
-            auto elQuery = R"(
-                SELECT p.id_asset_element
-                FROM v_bios_asset_element_super_parent p
-                WHERE :containerid in (p.id_parent1, p.id_parent2, p.id_parent3, p.id_parent4,
-                    p.id_parent5, p.id_parent6, p.id_parent7, p.id_parent8, p.id_parent9, p.id_parent10)
-            )";
 
+        std::string elQuery = R"(
+            SELECT p.id_asset_element
+            FROM v_bios_asset_element_super_parent p
+            WHERE :containerid in (p.id_parent1, p.id_parent2, p.id_parent3, p.id_parent4,
+                p.id_parent5, p.id_parent6, p.id_parent7, p.id_parent8, p.id_parent9, p.id_parent10)
+        )";
+
+        for (const auto& row : conn.select(dcSql)) {
             for (const auto& elRow : conn.select(elQuery, "containerid"_p = row.get<int64_t>("id_asset_element"))) {
                 ids.push_back(elRow.get<int64_t>("id_asset_element"));
             }
@@ -198,11 +200,19 @@ static std::string byLocation(tnt::Connection& conn, const Group::Condition& con
             )";
         }
 
-        return R"(
+        std::string ret = R"(
             SELECT id_asset_element
             FROM t_bios_asset_element
             WHERE id_asset_element in ({})
         )"_format(fty::implode(ids, ","));
+
+        if (cond.op == Group::ConditionOp::IsNot) {
+            ret = "SELECT id_asset_element FROM t_bios_asset_element WHERE id_asset_element NOT IN ("+ret+")";
+        }
+
+        ret += " AND id_type NOT IN ({})"_format(fty::implode(avail, ", "));
+
+        return ret;
     } catch (const std::exception& e) {
         throw Error(e.what());
     }

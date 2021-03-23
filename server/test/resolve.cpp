@@ -302,6 +302,95 @@ TEST_CASE("Resolve by location")
     }
 }
 
+TEST_CASE("Resolve by location 2")
+{
+    try {
+        fty::SampleDb db(R"(
+            items:
+                - type : Datacenter
+                  name : datacenter
+                  items:
+                    - type     : Room
+                      name     : room
+                      ext-name : Room
+                      items:
+                        - type     : Rack
+                          name     : rack
+                          ext-name : Rack
+                          items:
+                            - type     : Server
+                              name     : srv11
+                              ext-name : srv11
+                - type : Datacenter
+                  name : datacenter1
+                  items:
+                    - type     : Server
+                      name     : srv21
+                      ext-name : srv21
+            )");
+
+        Group group;
+        group.name          = "ByLocation";
+        group.rules.groupOp = fty::Group::LogicalOp::And;
+
+        auto& var  = group.rules.conditions.append();
+        auto& cond = var.reset<fty::Group::Condition>();
+        cond.field = fty::Group::Fields::Location;
+
+        //"Contains"
+        {
+            cond.value = "room";
+            cond.op    = fty::Group::ConditionOp::Contains;
+
+            auto g    = group.create();
+            auto info = g.resolve();
+
+            REQUIRE(info.size() == 1);
+            CHECK(info[0].name == "srv11");
+        }
+
+        // "Is"
+        {
+            cond.value = "room";
+            cond.op    = fty::Group::ConditionOp::Is;
+
+            auto g    = group.create();
+            auto info = g.resolve();
+
+            REQUIRE(info.size() == 1);
+            CHECK(info[0].name == "srv11");
+        }
+
+        //"IsNot"
+        {
+            cond.value = "room";
+            cond.op    = fty::Group::ConditionOp::IsNot;
+
+            auto g    = group.create();
+            auto info = g.resolve();
+
+            REQUIRE(info.size() == 1);
+            CHECK(info[0].name == "srv21");
+        }
+
+        //"Not exists"
+        {
+            cond.value = "wtf";
+            cond.op    = fty::Group::ConditionOp::Is;
+
+            auto g    = group.create();
+            auto info = g.resolve();
+
+            REQUIRE(info.size() == 0);
+        }
+
+
+        CHECK(fty::Storage::clear());
+    } catch (const std::exception& ex) {
+        FAIL(ex.what());
+    }
+}
+
 TEST_CASE("Resolve by type")
 {
     try {
