@@ -976,20 +976,20 @@ TEST_CASE("Resolve by hostname vm")
                   name : infra
                 - type : Hypervisor
                   name : hypervisor
+                - type : Hypervisor
+                  name : hypervisor1
+                - type : VirtualMachine
+                  name : vm1
                   attrs:
                       hostName : hypo
                       address  : "[/127.0.0.1,]"
-                - type : Hypervisor
-                  name : hypervisor1
-                  attrs:
-                      hostName : hypo1
-                      address  : "[/192.168.0.1,]"
-                - type : VirtualMachine
-                  name : vm1
                 - type : VirtualMachine
                   name : vm2
                 - type : VirtualMachine
                   name : vm3
+                  attrs:
+                      hostName : hypo1
+                      address  : "[/192.168.0.1,]"
             links:
                 - dest : vm1
                   src  : hypervisor
@@ -1027,10 +1027,9 @@ TEST_CASE("Resolve by hostname vm")
             auto g    = group.create();
             auto info = g.resolve();
 
-            REQUIRE(info.size() == 3);
+            REQUIRE(info.size() == 2);
             CHECK(info[0].name == "vm1");
-            CHECK(info[1].name == "vm2");
-            CHECK(info[2].name == "vm3");
+            CHECK(info[1].name == "vm3");
         }
 
         // Is
@@ -1042,9 +1041,8 @@ TEST_CASE("Resolve by hostname vm")
             auto g    = group.create();
             auto info = g.resolve();
 
-            REQUIRE(info.size() == 2);
+            REQUIRE(info.size() == 1);
             CHECK(info[0].name == "vm1");
-            CHECK(info[1].name == "vm2");
         }
 
         // Is not

@@ -207,7 +207,7 @@ static std::string byLocation(tnt::Connection& conn, const Group::Condition& con
         )"_format(fty::implode(ids, ","));
 
         if (cond.op == Group::ConditionOp::IsNot) {
-            ret = "SELECT id_asset_element FROM t_bios_asset_element WHERE id_asset_element NOT IN ("+ret+")";
+            ret = "SELECT id_asset_element FROM t_bios_asset_element WHERE id_asset_element NOT IN (" + ret + ")";
         }
 
         ret += " AND id_type NOT IN ({})"_format(fty::implode(avail, ", "));
@@ -222,62 +222,40 @@ static std::string byLocation(tnt::Connection& conn, const Group::Condition& con
 
 static std::string byHostName(const Group::Condition& cond)
 {
-    auto byDevice = [&]() {
-        std::string sql = R"(
-            SELECT e.id_asset_element
-            FROM t_bios_asset_element AS e
-            LEFT JOIN t_bios_asset_ext_attributes a ON e.id_asset_element = a.id_asset_element
-            WHERE a.keytag='hostname.1' AND e.id_type = {type} AND
-                  a.value {op} '{val}')";
-
-        if (cond.op == Group::ConditionOp::IsNot) {
-            sql =
-                "SELECT id_asset_element FROM t_bios_asset_element \
-                   WHERE id_type = {type} AND id_asset_element NOT IN (" +
-                sql + ")";
-        }
-
-        // clang-format off
-        return fmt::format(sql,
-            "type"_a = persist::DEVICE,
-            "op"_a   = cond.op != Group::ConditionOp::IsNot ? op(cond) : "=",
-            "val"_a  = value(cond)
-        );
-        // clang-format on
-    };
-
-    auto byVirtDevice = [&]() {
-        std::string sql = R"(
-            SELECT l.id_asset_device_dest FROM t_bios_asset_link AS l
-            LEFT JOIN t_bios_asset_ext_attributes AS a ON a.id_asset_element = l.id_asset_device_src
-            LEFT JOIN t_bios_asset_element AS e ON e.id_asset_element = l.id_asset_device_dest
-            WHERE
-                l.id_asset_link_type IN ({linkTypes}) AND
+    std::string sql = R"(
+        SELECT e.id_asset_element
+        FROM t_bios_asset_element AS e
+        LEFT JOIN t_bios_asset_ext_attributes a ON e.id_asset_element = a.id_asset_element
+        WHERE
+            a.value {op} '{val}' AND
+            ((
+                a.keytag='hostname.1' AND
+                e.id_type = {dtype}
+            ) OR (
                 a.keytag = 'hostName' AND
-                a.value {op} '{val}' AND
-                e.id_type = {type} AND
-                e.id_subtype = {subtype}
-        )";
+                e.id_type = {vtype} AND
+                e.id_subtype = {vsubtype}
+            ))
+    )";
 
-        if (cond.op == Group::ConditionOp::IsNot) {
-            sql =
-                "SELECT id_asset_element FROM t_bios_asset_element \
-                  WHERE id_type = {type} AND id_subtype = {subtype} AND id_asset_element NOT IN (" +
-                sql + ")";
-        }
+    if (cond.op == Group::ConditionOp::IsNot) {
+        sql =
+            "SELECT id_asset_element FROM t_bios_asset_element \
+               WHERE (id_type = {dtype} OR (id_type = {vtype} AND id_subtype = {vsubtype})) AND \
+               id_asset_element NOT IN (" +
+            sql + ")";
+    }
 
-        // clang-format off
-        return fmt::format(sql,
-            "linkTypes"_a = fty::implode(vmLinkTypes(), ", "),
-            "val"_a       = value(cond),
-            "op"_a        = cond.op != Group::ConditionOp::IsNot ? op(cond) : "=",
-            "type"_a      = persist::VIRTUAL_MACHINE,
-            "subtype"_a   = persist::VMWARE_VM
-        );
-        // clang-format on
-    };
-
-    return "{} union {}"_format(byDevice(), byVirtDevice());
+    // clang-format off
+    std::string ret = fmt::format(sql,
+        "dtype"_a    = persist::DEVICE,
+        "vtype"_a    = persist::VIRTUAL_MACHINE,
+        "vsubtype"_a = persist::VMWARE_VM,
+        "op"_a       = cond.op != Group::ConditionOp::IsNot ? op(cond) : "=",
+        "val"_a      = value(cond)
+    );
+    // clang-format on
+    return ret;
 }
 
 // =====================================================================================================================
