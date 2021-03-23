@@ -1,8 +1,7 @@
-#include <catch2/catch.hpp>
 #include "lib/jobs/create.h"
-#include "lib/storage.h"
-
 #include "db.h"
+#include "lib/storage.h"
+#include <catch2/catch.hpp>
 
 
 TEST_CASE("Create")
@@ -25,7 +24,7 @@ TEST_CASE("Create")
         }
 
         fty::job::Create create;
-        fty::Group created;
+        fty::Group       created;
         REQUIRE_NOTHROW(create.run(group, created));
         CHECK(created.hasValue());
         CHECK(created.id > 0);
@@ -50,11 +49,11 @@ TEST_CASE("Create")
                 }
             }
         )";
-        fty::Group group;
+        fty::Group  group;
         pack::json::deserialize(json, group);
 
         fty::job::Create create;
-        fty::Group created;
+        fty::Group       created;
         REQUIRE_NOTHROW(create.run(group, created));
 
         CHECK(created.hasValue());
@@ -86,11 +85,11 @@ TEST_CASE("Create")
                 }
             }
         )";
-        fty::Group group;
+        fty::Group  group;
         pack::json::deserialize(json, group);
 
         fty::job::Create create;
-        fty::Group created;
+        fty::Group       created;
         REQUIRE_THROWS_WITH(create.run(group, created), "Valid condition operator is expected");
     }
 
@@ -111,11 +110,11 @@ TEST_CASE("Create")
                 }
             }
         )";
-        fty::Group group;
+        fty::Group  group;
         pack::json::deserialize(json, group);
 
         fty::job::Create create;
-        fty::Group created;
+        fty::Group       created;
         REQUIRE_THROWS_WITH(create.run(group, created), "Valid logical operator is expected");
     }
 
@@ -135,11 +134,11 @@ TEST_CASE("Create")
                 }
             }
         )";
-        fty::Group group;
+        fty::Group  group;
         pack::json::deserialize(json, group);
 
         fty::job::Create create;
-        fty::Group created;
+        fty::Group       created;
         REQUIRE_THROWS_WITH(create.run(group, created), "Name expected");
     }
 
@@ -151,11 +150,11 @@ TEST_CASE("Create")
                     "name": "By Type",
                 }
             )";
-            fty::Group group;
+            fty::Group  group;
             pack::json::deserialize(json, group);
 
             fty::job::Create create;
-            fty::Group created;
+            fty::Group       created;
             REQUIRE_THROWS_WITH(create.run(group, created), "Any condition is expected");
         }
         {
@@ -169,11 +168,11 @@ TEST_CASE("Create")
                     }
                 }
             )";
-            fty::Group group;
+            fty::Group  group;
             pack::json::deserialize(json, group);
 
             fty::job::Create create;
-            fty::Group created;
+            fty::Group       created;
             REQUIRE_THROWS_WITH(create.run(group, created), "Any condition is expected");
         }
     }
@@ -194,12 +193,34 @@ TEST_CASE("Create")
                 }
             }
         )";
-        fty::Group group;
+        fty::Group  group;
         pack::json::deserialize(json, group);
 
         fty::job::Create create;
-        fty::Group created;
+        fty::Group       created;
         REQUIRE_THROWS_WITH(create.run(group, created), "Value of condition is expected");
+    }
+
+    SECTION("From yaml, group CONTAINS")
+    {
+        static std::string jaml(R"(
+              name  : ByName
+              rules : 
+                  operator  : AND
+                  conditions:
+                    - field    : group
+                      operator : CONTAINS
+                      value    : 1
+            )");
+
+        fty::Group group;
+
+        if (auto ret = pack::yaml::deserialize(jaml, group); !ret) {
+            FAIL(ret.error());
+        }
+        fty::job::Create create;
+        fty::Group       created;
+        REQUIRE_THROWS_WITH(create.run(group, created), "Valid value of condition for linked group is expected");
     }
 
     CHECK(fty::Storage::clear());

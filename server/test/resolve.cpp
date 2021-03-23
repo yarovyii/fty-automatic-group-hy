@@ -5,6 +5,8 @@
 #include "lib/storage.h"
 #include <catch2/catch.hpp>
 
+using namespace fmt::literals;
+
 class Group : public fty::Group
 {
 public:
@@ -1211,105 +1213,6 @@ TEST_CASE("Resolve by hosted by")
     }
 }
 
-struct GroupsData : pack::Node
-{
-    struct Condition : pack::Node
-    {
-        pack::String field = FIELD("field");
-        pack::String op    = FIELD("operator");
-        pack::String value = FIELD("value");
-
-        using pack::Node::Node;
-        META(Condition, field, op, value);
-    };
-
-    struct Item : pack::Node
-    {
-        pack::String                name  = FIELD("name");
-        pack::String                op    = FIELD("operator");
-        pack::ObjectList<Condition> rules = FIELD("rules");
-
-        using pack::Node::Node;
-        META(Item, name, op, rules);
-    };
-
-
-    pack::ObjectList<Item> items = FIELD("items");
-
-    using pack::Node::Node;
-    META(GroupsData, items);
-
-    std::vector<Group> groups;
-    GroupsData(const std::string& data);
-
-    Group& group(const std::string name, uint64_t id = 0, bool numExist = false);
-};
-
-GroupsData::GroupsData(const std::string& data)
-{
-    if (auto ret = pack::yaml::deserialize(data, *this); !ret) {
-        throw std::runtime_error(ret.error());
-    }
-
-    for (const auto& item : items) {
-        groups.emplace_back(Group());
-        auto& g = groups.back();
-        g.name  = item.name.value();
-
-        {
-            fty::Group::LogicalOp opEnum;
-            std::stringstream     ss;
-            ss << item.op.value();
-            ss >> opEnum;
-            g.rules.groupOp = opEnum;
-        }
-
-        int it = 0;
-        for (const auto& condition : item.rules) {
-            auto& group = g.rules.conditions.append();
-            auto& cond  = group.reset<fty::Group::Condition>();
-
-            {
-                fty::Group::Fields fieldEnum;
-                std::stringstream  ss;
-                ss << condition.field.value();
-                ss >> fieldEnum;
-                cond.field = fieldEnum;
-            }
-
-            {
-                fty::Group::ConditionOp condOpEnum;
-                std::stringstream       ss;
-                ss << condition.op.value();
-                ss >> condOpEnum;
-                cond.op = condOpEnum;
-            }
-
-            cond       = g.rules.conditions[it++].get<fty::Group::Condition>();
-            cond.value = condition.value;
-        }
-    }
-}
-
-Group& GroupsData::group(const std::string name, uint64_t id, bool numExist)
-{
-    for (auto& groupIn : groups) {
-        if (groupIn.name.value() == name) {
-            if (numExist) {
-                for (auto& condition : groupIn.rules.conditions) {
-                    auto& cond = condition.get<fty::Group::Condition>();
-                    if (cond.field == fty::Group::Fields::Group) {
-                        cond.value = fty::convert<std::string, uint64_t>(id);
-                        std::cerr << cond.value.value() << std::endl;
-                    }
-                }
-            }
-            return groupIn;
-        }
-    }
-    throw std::runtime_error("Group does not exist");
-}
-
 TEST_CASE("Resolve by Group")
 {
     try {
@@ -1338,47 +1241,72 @@ TEST_CASE("Resolve by Group")
                       ext-name : servsrv
             )");
 
-        GroupsData allGroups(R"(
-            items:
-              - name : ByName
-                operator : AND
-                rules : 
-                  - field : name
-                    operator : CONTAINS
-                    value : srv
-              - name : WithLink
-                operator : AND
-                rules : 
-                  - field : name
-                    operator : IS
-                    value : serv
-                  - field : group
-                    operator : IS
-                    value : ByName
-              - name : LinkTmp
-                operator : AND
-                rules : 
-                  - field : name
-                    operator : CONTAINS
-                    value : srv21
+        static std::string groupNameJaml(R"(
+              name  : ByName
+              rules : 
+                  operator  : AND
+                  conditions:
+                    - field    : name
+                      operator : CONTAINS
+                      value    : srv
             )");
 
-        auto groupName = allGroups.group("ByName").create();
+        Group groupName;
+
+        if (auto ret = pack::yaml::deserialize(groupNameJaml, groupName); !ret) {
+            FAIL(ret.error());
+        }
+
+        auto createdName = groupName.create();
 
         // And operator | Contains
         {
-            auto g    = allGroups.group("WithLink", groupName.id.value(), true).create();
+            std::string groupWithLinkJaml = R"(
+                name  : WithLink
+                rules :
+                    operator  : AND
+                    conditions:
+                      - field    : name
+                        operator : CONTAINS
+                        value    : serv
+                      - field    : group
+                        operator : IS
+                        value    : {}
+            )"_format(createdName.id.value());
+
+            Group groupLink;
+
+            if (auto ret = pack::yaml::deserialize(groupWithLinkJaml, groupLink); !ret) {
+                FAIL(ret.error());
+            }
+            auto g    = groupLink.create();
             auto info = g.resolve();
-            REQUIRE(info.size() == 0);
+            REQUIRE(info.size() == 1);
+            CHECK(info[0].name == "servsrv");
         }
 
         // IsNot in group
         {
-            auto& group = allGroups.group("WithLink", groupName.id.value(), true);
-            auto& cond  = group.rules.conditions[0].get<fty::Group::Condition>();
-            cond.op     = fty::Group::ConditionOp::IsNot;
+            std::string groupWithLinkJaml = R"(
+                name  : WithLink
+                rules :
+                    operator  : AND
+                    conditions:
+                      - field    : name
+                        operator : ISNOT
+                        value    : serv
+                      - field    : group
+                        operator : IS
+                        value    : {}
+            )"_format(createdName.id.value());
 
-            auto g    = group.create();
+            Group groupLink;
+
+            if (auto ret = pack::yaml::deserialize(groupWithLinkJaml, groupLink); !ret) {
+                FAIL(ret.error());
+            }
+
+            auto g    = groupLink.create();
             auto info = g.resolve();
             REQUIRE(info.size() == 3);
             CHECK(info[0].name == "srv11");
@@ -1388,15 +1316,26 @@ TEST_CASE("Resolve by Group")
 
         // IsNot group
         {
-            auto& group = allGroups.group("WithLink", groupName.id.value(), true);
+            std::string groupWithLinkJaml = R"(
+                name  : WithLink
+                rules :
+                    operator  : AND
+                    conditions:
+                      - field    : name
+                        operator : CONTAINS
+                        value    : serv
+                      - field    : group
+                        operator : ISNOT
+                        value    : {}
+            )"_format(createdName.id.value());
 
-            auto& condName = group.rules.conditions[0].get<fty::Group::Condition>();
-            condName.op    = fty::Group::ConditionOp::Contains;
+            Group groupLink;
 
-            auto& condGroupLink = group.rules.conditions[1].get<fty::Group::Condition>();
-            condGroupLink.op    = fty::Group::ConditionOp::IsNot;
+            if (auto ret = pack::yaml::deserialize(groupWithLinkJaml, groupLink); !ret) {
+                FAIL(ret.error());
+            }
 
-            auto g    = group.create();
+            auto g    = groupLink.create();
             auto info = g.resolve();
             REQUIRE(info.size() == 1);
             CHECK(info[0].name == "serv");
@@ -1404,34 +1343,53 @@ TEST_CASE("Resolve by Group")
 
         // IsNot with two linked groups
         {
-            auto groupTmp = allGroups.group("LinkTmp").create();
+            std::string groupTmpJaml(R"(
+                name  : LinkTmp
+                rules : 
+                    operator  : AND
+                    conditions:
+                      - field    : name
+                        operator : CONTAINS
+                        value    : srv21
+            )");
 
-            auto& group = allGroups.group("WithLink", groupName.id.value(), true);
+            Group groupLink;
+            Group groupTmp;
 
-            auto& condName = group.rules.conditions[0].get<fty::Group::Condition>();
-            condName.value = "s";
-            condName.op    = fty::Group::ConditionOp::Contains;
+            if (auto ret = pack::yaml::deserialize(groupTmpJaml, groupTmp); !ret) {
+                FAIL(ret.error());
+            }
 
-            auto& condGroupLink = group.rules.conditions[1].get<fty::Group::Condition>();
-            condGroupLink.op    = fty::Group::ConditionOp::IsNot;
+            auto gTmp = groupTmp.create();
 
-            // second link create
-            auto& groupGroupLink = group.rules.conditions.append();
-            auto& condGroupLink1 = groupGroupLink.reset<fty::Group::Condition>();
-            condGroupLink1.field = fty::Group::Fields::Group;
+            std::string groupWithLinkJaml = R"(
+                name : WithLink
+                rules :
+                    operator : AND
+                    conditions:
+                      - field : name
+                        operator : CONTAINS
+                        value : s
+                      - field : group
+                        operator : ISNOT
+                        value : {}
+                      - field : group
+                        operator : ISNOT
+                        value : {}
+            )"_format(createdName.id.value(), gTmp.id.value());
 
-            condGroupLink1       = group.rules.conditions[2].get<fty::Group::Condition>();
-            condGroupLink1.value = fty::convert<std::string, uint64_t>(groupTmp.id.value());
-            condGroupLink1.op    = fty::Group::ConditionOp::IsNot;
+            if (auto ret = pack::yaml::deserialize(groupWithLinkJaml, groupLink); !ret) {
+                FAIL(ret.error());
+            }
 
-            auto g1   = group.create();
-            auto info = g1.resolve();
+            auto g    = groupLink.create();
+            auto info = g.resolve();
 
             REQUIRE(info.size() == 1);
             CHECK(info[0].name == "serv");
         }
 
-        groupName.remove();
+        createdName.remove();
         CHECK(fty::Storage::clear());
     } catch (const std::exception& ex) {
         FAIL(ex.what());
