@@ -255,18 +255,19 @@ static std::string byHostName(const Group::Condition& cond)
                 e.id_subtype = {subtype}
         )";
 
-        if (cond.op == Group::ConditionOp::IsNot) {
+        if (cond.op == Group::ConditionOp::IsNot || cond.op == Group::ConditionOp::DoesNotContain) {
             sql =
                 "SELECT id_asset_element FROM t_bios_asset_element \
                   WHERE id_type = {type} AND id_subtype = {subtype} AND id_asset_element NOT IN (" +
                 sql + ")";
+            tmpOp = cond.op != Group::ConditionOp::IsNot ? "like" : "=";
         }
 
         // clang-format off
         return fmt::format(sql,
             "linkTypes"_a = fty::implode(vmLinkTypes(), ", "),
             "val"_a       = value(cond),
-            "op"_a        = cond.op != Group::ConditionOp::IsNot ? op(cond) : "=",
+            "op"_a        = tmpOp,
             "type"_a      = persist::VIRTUAL_MACHINE,
             "subtype"_a   = persist::VMWARE_VM
         );
@@ -280,7 +281,8 @@ static std::string byHostName(const Group::Condition& cond)
 
 static std::string byIpAddress(const Group::Condition& cond)
 {
-    auto addresses = fty::split(cond.value, "|");
+    auto        addresses = fty::split(cond.value, "|");
+    std::string tmpOp     = op(cond);
 
     auto conds = [&](bool isVirt) -> std::vector<std::string> {
         std::vector<std::string> ret;
@@ -302,6 +304,7 @@ static std::string byIpAddress(const Group::Condition& cond)
                     sop   = cond.op == Group::ConditionOp::IsNot ? "=" : op(cond);
                     saddr = cond.op == Group::ConditionOp::Contains ? "%" + addr + "%" : addr;
                 }
+
                 if (isVirt) {
                     ret.push_back("a.value {} '[/{},]'"_format(sop, saddr));
                 } else {
@@ -320,17 +323,18 @@ static std::string byIpAddress(const Group::Condition& cond)
             WHERE a.keytag='ip.1' AND e.id_type = {type} AND {val}
         )";
 
-        if (cond.op == Group::ConditionOp::IsNot) {
+        if (cond.op == Group::ConditionOp::IsNot || cond.op == Group::ConditionOp::DoesNotContain) {
             sql =
                 "SELECT id_asset_element FROM t_bios_asset_element \
                     WHERE id_type = {type} AND id_asset_element NOT IN (" +
                 sql + ")";
+            tmpOp = cond.op != Group::ConditionOp::IsNot ? "like" : "=";
         }
 
         // clang-format off
         return fmt::format(sql,
             "type"_a = persist::DEVICE,
-            "op"_a   = cond.op != Group::ConditionOp::IsNot ? op(cond) : "=",
+            "op"_a   = tmpOp,
             "val"_a  = fty::implode(conds(false), " OR ")
         );
         // clang-format on
@@ -349,18 +353,19 @@ static std::string byIpAddress(const Group::Condition& cond)
                 e.id_subtype = {subtype}
         )";
 
-        if (cond.op == Group::ConditionOp::IsNot) {
+        if (cond.op == Group::ConditionOp::IsNot || cond.op == Group::ConditionOp::DoesNotContain) {
             sql =
                 "SELECT id_asset_element FROM t_bios_asset_element \
                   WHERE id_type = {type} AND id_subtype = {subtype} AND id_asset_element NOT IN (" +
                 sql + ")";
+            tmpOp = cond.op != Group::ConditionOp::IsNot ? "like" : "=";
         }
 
         // clang-format off
         return fmt::format(sql,
             "linkTypes"_a = fty::implode(vmLinkTypes(), ", "),
             "val"_a       = fty::implode(conds(true), " OR "),
-            "op"_a        = cond.op != Group::ConditionOp::IsNot ? op(cond) : "=",
+            "op"_a        = tmpOp,
             "type"_a      = persist::VIRTUAL_MACHINE,
             "subtype"_a   = persist::VMWARE_VM
         );
@@ -388,7 +393,7 @@ static std::string byHostedBy(const Group::Condition& cond)
     return fmt::format(sql,
         "linkTypes"_a = fty::implode(vmLinkTypes(), ", "),
         "op"_a        = op(cond),
-        "val"_a = value(cond),
+        "val"_a       = value(cond),
         "type"_a      = persist::HYPERVISOR,
         "subtype"_a   = persist::VMWARE_ESXI
     );
