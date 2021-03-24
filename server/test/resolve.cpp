@@ -302,6 +302,95 @@ TEST_CASE("Resolve by location")
     }
 }
 
+TEST_CASE("Resolve by location 2")
+{
+    try {
+        fty::SampleDb db(R"(
+            items:
+                - type : Datacenter
+                  name : datacenter
+                  items:
+                    - type     : Room
+                      name     : room
+                      ext-name : Room
+                      items:
+                        - type     : Rack
+                          name     : rack
+                          ext-name : Rack
+                          items:
+                            - type     : Server
+                              name     : srv11
+                              ext-name : srv11
+                - type : Datacenter
+                  name : datacenter1
+                  items:
+                    - type     : Server
+                      name     : srv21
+                      ext-name : srv21
+            )");
+
+        Group group;
+        group.name          = "ByLocation";
+        group.rules.groupOp = fty::Group::LogicalOp::And;
+
+        auto& var  = group.rules.conditions.append();
+        auto& cond = var.reset<fty::Group::Condition>();
+        cond.field = fty::Group::Fields::Location;
+
+        //"Contains"
+        {
+            cond.value = "room";
+            cond.op    = fty::Group::ConditionOp::Contains;
+
+            auto g    = group.create();
+            auto info = g.resolve();
+
+            REQUIRE(info.size() == 1);
+            CHECK(info[0].name == "srv11");
+        }
+
+        // "Is"
+        {
+            cond.value = "room";
+            cond.op    = fty::Group::ConditionOp::Is;
+
+            auto g    = group.create();
+            auto info = g.resolve();
+
+            REQUIRE(info.size() == 1);
+            CHECK(info[0].name == "srv11");
+        }
+
+        //"IsNot"
+        {
+            cond.value = "room";
+            cond.op    = fty::Group::ConditionOp::IsNot;
+
+            auto g    = group.create();
+            auto info = g.resolve();
+
+            REQUIRE(info.size() == 1);
+            CHECK(info[0].name == "srv21");
+        }
+
+        //"Not exists"
+        {
+            cond.value = "wtf";
+            cond.op    = fty::Group::ConditionOp::Is;
+
+            auto g    = group.create();
+            auto info = g.resolve();
+
+            REQUIRE(info.size() == 0);
+        }
+
+
+        CHECK(fty::Storage::clear());
+    } catch (const std::exception& ex) {
+        FAIL(ex.what());
+    }
+}
+
 TEST_CASE("Resolve by type")
 {
     try {
@@ -887,20 +976,20 @@ TEST_CASE("Resolve by hostname vm")
                   name : infra
                 - type : Hypervisor
                   name : hypervisor
+                - type : Hypervisor
+                  name : hypervisor1
+                - type : VirtualMachine
+                  name : vm1
                   attrs:
                       hostName : hypo
                       address  : "[/127.0.0.1,]"
-                - type : Hypervisor
-                  name : hypervisor1
-                  attrs:
-                      hostName : hypo1
-                      address  : "[/192.168.0.1,]"
-                - type : VirtualMachine
-                  name : vm1
                 - type : VirtualMachine
                   name : vm2
                 - type : VirtualMachine
                   name : vm3
+                  attrs:
+                      hostName : hypo1
+                      address  : "[/192.168.0.1,]"
             links:
                 - dest : vm1
                   src  : hypervisor
@@ -938,10 +1027,9 @@ TEST_CASE("Resolve by hostname vm")
             auto g    = group.create();
             auto info = g.resolve();
 
-            REQUIRE(info.size() == 3);
+            REQUIRE(info.size() == 2);
             CHECK(info[0].name == "vm1");
-            CHECK(info[1].name == "vm2");
-            CHECK(info[2].name == "vm3");
+            CHECK(info[1].name == "vm3");
         }
 
         // Is
@@ -953,9 +1041,8 @@ TEST_CASE("Resolve by hostname vm")
             auto g    = group.create();
             auto info = g.resolve();
 
-            REQUIRE(info.size() == 2);
+            REQUIRE(info.size() == 1);
             CHECK(info[0].name == "vm1");
-            CHECK(info[1].name == "vm2");
         }
 
         // Is not
@@ -1000,20 +1087,20 @@ TEST_CASE("Resolve by ip address vm")
                   name : infra
                 - type : Hypervisor
                   name : hypervisor
+                - type : Hypervisor
+                  name : hypervisor1
+                - type : VirtualMachine
+                  name : vm1
                   attrs:
                       hostName : hypo
                       address  : "[/127.0.0.1,]"
-                - type : Hypervisor
-                  name : hypervisor1
-                  attrs:
-                      hostName : hypo1
-                      address  : "[/192.168.0.1,]"
-                - type : VirtualMachine
-                  name : vm1
                 - type : VirtualMachine
                   name : vm2
                 - type : VirtualMachine
                   name : vm3
+                  attrs:
+                      hostName : hypo1
+                      address  : "[/192.168.0.1,]"
             links:
                 - dest : vm1
                   src  : hypervisor
@@ -1051,9 +1138,8 @@ TEST_CASE("Resolve by ip address vm")
             auto g    = group.create();
             auto info = g.resolve();
 
-            REQUIRE(info.size() == 2);
+            REQUIRE(info.size() == 1);
             CHECK(info[0].name == "vm1");
-            CHECK(info[1].name == "vm2");
         }
 
         // Is
@@ -1064,9 +1150,8 @@ TEST_CASE("Resolve by ip address vm")
             auto g    = group.create();
             auto info = g.resolve();
 
-            REQUIRE(info.size() == 2);
+            REQUIRE(info.size() == 1);
             CHECK(info[0].name == "vm1");
-            CHECK(info[1].name == "vm2");
         }
 
         // Is
@@ -1089,8 +1174,9 @@ TEST_CASE("Resolve by ip address vm")
             auto g    = group.create();
             auto info = g.resolve();
 
-            REQUIRE(info.size() == 1);
-            CHECK(info[0].name == "vm3");
+            REQUIRE(info.size() == 2);
+            CHECK(info[0].name == "vm2");
+            CHECK(info[1].name == "vm3");
         }
 
         // Wrong

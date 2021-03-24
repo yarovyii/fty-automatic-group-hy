@@ -63,7 +63,10 @@ struct DBData : pack::Node
         Connector,
         InfraService,
         Hypervisor,
-        VirtualMachine
+        VirtualMachine,
+        Room,
+        Row,
+        Rack,
     };
 
     struct Item : pack::Node
@@ -111,6 +114,12 @@ std::istream& operator>>(std::istream& ss, DBData::Types& value)
         value = DBData::Types::Hypervisor;
     } else if (strval == "VirtualMachine") {
         value = DBData::Types::VirtualMachine;
+    } else if (strval == "Room") {
+        value = DBData::Types::Room;
+    } else if (strval == "Row") {
+        value = DBData::Types::Row;
+    } else if (strval == "Rack") {
+        value = DBData::Types::Rack;
     } else {
         value = DBData::Types::Unknown;
     }
@@ -142,6 +151,12 @@ static void createItem(tnt::Connection& conn, const DBData::Item& item, std::vec
                 return persist::HYPERVISOR;
             case DBData::Types::VirtualMachine:
                 return persist::VIRTUAL_MACHINE;
+            case DBData::Types::Room:
+                return persist::ROOM;
+            case DBData::Types::Row:
+                return persist::ROW;
+            case DBData::Types::Rack:
+                return persist::RACK;
             case DBData::Types::Unknown:
                 return persist::TUNKNOWN;
         }
@@ -162,6 +177,9 @@ static void createItem(tnt::Connection& conn, const DBData::Item& item, std::vec
                 return persist::VMWARE_ESXI;
             case DBData::Types::VirtualMachine:
                 return persist::VMWARE_VM;
+            case DBData::Types::Room:
+            case DBData::Types::Row:
+            case DBData::Types::Rack:
             case DBData::Types::Unknown:
                 return persist::SUNKNOWN;
         }
