@@ -4,7 +4,7 @@
 namespace fty {
 
 static constexpr const char* Channel = "FTY.Q.GROUP.QUERY";
-static constexpr const char* Events  = "FTY.Q.GROUP.EVENT";
+static constexpr const char* Events  = "FTY.T.GROUP.EVENT";
 
 namespace commands::create {
     static constexpr const char* Subject = "CREATE";
