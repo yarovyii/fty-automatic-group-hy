@@ -159,6 +159,22 @@ static std::string bySubType(const Group::Condition& cond)
 
 // =====================================================================================================================
 
+static std::vector<uint64_t> hypervisorLinkTypes()
+{
+    static std::vector<uint64_t> ids = []() {
+        std::string sql =
+            "select id_asset_link_type from t_bios_asset_link_type where name = 'ipminfra.server.hosts.os'";
+        tnt::Connection       conn;
+        std::vector<uint64_t> ret;
+        for (const auto& it : conn.select(sql)) {
+            ret.push_back(it.get<uint64_t>("id_asset_link_type"));
+        }
+        return ret;
+    }();
+
+    return ids;
+}
+
 static std::string byLocation(tnt::Connection& conn, const Group::Condition& cond)
 {
     std::string dcSql = R"(
@@ -198,6 +214,48 @@ static std::string byLocation(tnt::Connection& conn, const Group::Condition& con
                 FROM t_bios_asset_element
                 WHERE id_asset_element = 0
             )";
+        }
+
+        // get hypervisors
+        std::string sqlHypervisor = R"(
+            select id_asset_device_src 
+            from t_bios_asset_link as l
+            LEFT JOIN t_bios_asset_element AS e ON e.id_asset_element = l.id_asset_device_dest
+            where id_asset_device_dest in({id}) and 
+                l.id_asset_link_type IN ({linkTypes})     
+        )";
+
+        // hosted by | get VMs
+        std::string sqlVM = R"(
+        SELECT l.id_asset_device_dest FROM t_bios_asset_link AS l
+        LEFT JOIN t_bios_asset_element AS e ON e.id_asset_element = l.id_asset_device_src
+        WHERE
+            l.id_asset_link_type IN ({linkTypes}) AND
+            e.id_type = {type} AND
+            e.id_subtype = {subtype} AND
+            e.id_asset_element in ({val})
+        )";
+
+        // clang-format off
+        sqlHypervisor = fmt::format(sqlHypervisor, 
+            "id"_a        = fty::implode(ids, ", "), 
+            "linkTypes"_a = fty::implode(hypervisorLinkTypes(), ", ")
+        );
+
+        sqlVM = fmt::format(sqlVM,
+            "linkTypes"_a = fty::implode(vmLinkTypes(), ", "), 
+            "val"_a = sqlHypervisor, 
+            "type"_a = persist::HYPERVISOR,
+            "subtype"_a = persist::VMWARE_ESXI
+        );
+        // clang-format on    
+
+        for (const auto& row : conn.select(sqlHypervisor)) {
+            ids.push_back(row.get<int64_t>("id_asset_device_src"));
+        }
+
+        for (const auto& row : conn.select(sqlVM)) {
+            ids.push_back(row.get<int64_t>("id_asset_device_dest"));
         }
 
         std::string ret = R"(
@@ -343,7 +401,7 @@ static std::string byHostedBy(const Group::Condition& cond)
     return fmt::format(sql,
         "linkTypes"_a = fty::implode(vmLinkTypes(), ", "),
         "op"_a        = op(cond),
-        "val"_a = value(cond),
+        "val"_a       = value(cond),
         "type"_a      = persist::HYPERVISOR,
         "subtype"_a   = persist::VMWARE_ESXI
     );
