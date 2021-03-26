@@ -1404,9 +1404,9 @@ TEST_CASE("Resolve by ip address vm")
 
             auto g    = group.create();
             auto info = g.resolve();
-            std::cerr << info[0].name.value() << "  " << std::endl;
-            REQUIRE(info.size() == 1); /// 2 == 1
-            CHECK(info[0].name == "vm3");
+            REQUIRE(info.size() == 2);
+            CHECK(info[0].name == "vm2");
+            CHECK(info[1].name == "vm3");
         }
 
         // Is
