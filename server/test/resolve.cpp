@@ -261,14 +261,14 @@ TEST_CASE("Resolve by location 3 | find vm and hypervisors as well")
                       name     : srv21
                       ext-name : srv21
             links:
-                - dest : srv11
-                  src  : hypervisor
+                - dest : hypervisor
+                  src  : srv11
                   type : ipminfra.server.hosts.os
-                - dest : srv112
-                  src  : hypervisor2
+                - dest : hypervisor2
+                  src  : srv112
                   type : ipminfra.server.hosts.os
-                - dest : srv21
-                  src  : hypervisor3
+                - dest : hypervisor3
+                  src  : srv21
                   type : ipminfra.server.hosts.os
                 - dest : vm1
                   src  : hypervisor
@@ -325,8 +325,6 @@ TEST_CASE("Resolve by location 3 | find vm and hypervisors as well")
 
             auto g    = group.create();
             auto info = g.resolve();
-            for(auto & in : info)
-              std::cerr << in.name.value() << std::endl;
             REQUIRE(info.size() == 4);
             CHECK(info[0].name == "hypervisor1");
             CHECK(info[1].name == "hypervisor3");
