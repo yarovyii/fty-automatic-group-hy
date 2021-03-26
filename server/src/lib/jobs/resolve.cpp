@@ -214,15 +214,16 @@ static std::string byLocation(tnt::Connection& conn, const Group::Condition& con
                 FROM t_bios_asset_element
                 WHERE id_asset_element = 0
             )";
-        }
+        }g
 
         // get hypervisors
         std::string sqlHypervisor = R"(
-            select id_asset_device_src 
+            select l.id_asset_device_dest 
             from t_bios_asset_link as l
-            LEFT JOIN t_bios_asset_element AS e ON e.id_asset_element = l.id_asset_device_dest
-            where id_asset_device_dest in({id}) and 
-                l.id_asset_link_type IN ({linkTypes})     
+            LEFT JOIN t_bios_asset_element AS e 
+            ON e.id_asset_element = l.id_asset_device_src
+            where l.id_asset_device_src in ({id}) and 
+                  l.id_asset_link_type IN ({linkTypes})     
         )";
 
         // hosted by | get VMs
@@ -248,11 +249,14 @@ static std::string byLocation(tnt::Connection& conn, const Group::Condition& con
             "type"_a = persist::HYPERVISOR,
             "subtype"_a = persist::VMWARE_ESXI
         );
-        // clang-format on    
+        // clang-format on  
+
+        std::cerr <<  sqlHypervisor << std::endl; 
 
         for (const auto& row : conn.select(sqlHypervisor)) {
-            ids.push_back(row.get<int64_t>("id_asset_device_src"));
+            ids.push_back(row.get<int64_t>("id_asset_device_dest"));
         }
+        std::cerr <<  sqlHypervisor << std::endl; 
 
         for (const auto& row : conn.select(sqlVM)) {
             ids.push_back(row.get<int64_t>("id_asset_device_dest"));

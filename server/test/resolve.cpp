@@ -261,14 +261,14 @@ TEST_CASE("Resolve by location 3 | find vm and hypervisors as well")
                       name     : srv21
                       ext-name : srv21
             links:
-                - dest : srv11
-                  src  : hypervisor
+                - dest : hypervisor
+                  src  : srv11
                   type : ipminfra.server.hosts.os
-                - dest : srv112
-                  src  : hypervisor2
+                - dest : hypervisor2
+                  src  : srv112
                   type : ipminfra.server.hosts.os
-                - dest : srv21
-                  src  : hypervisor3
+                - dest : hypervisor3
+                  src  : srv21
                   type : ipminfra.server.hosts.os
                 - dest : vm1
                   src  : hypervisor
