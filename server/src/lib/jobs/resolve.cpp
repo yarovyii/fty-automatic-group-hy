@@ -214,7 +214,7 @@ static std::string byLocation(tnt::Connection& conn, const Group::Condition& con
                 FROM t_bios_asset_element
                 WHERE id_asset_element = 0
             )";
-        }g
+        }
 
         // get hypervisors
         std::string sqlHypervisor = R"(
@@ -251,12 +251,9 @@ static std::string byLocation(tnt::Connection& conn, const Group::Condition& con
         );
         // clang-format on  
 
-        std::cerr <<  sqlHypervisor << std::endl; 
-
         for (const auto& row : conn.select(sqlHypervisor)) {
             ids.push_back(row.get<int64_t>("id_asset_device_dest"));
         }
-        std::cerr <<  sqlHypervisor << std::endl; 
 
         for (const auto& row : conn.select(sqlVM)) {
             ids.push_back(row.get<int64_t>("id_asset_device_dest"));

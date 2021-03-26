@@ -325,8 +325,6 @@ TEST_CASE("Resolve by location 3 | find vm and hypervisors as well")
 
             auto g    = group.create();
             auto info = g.resolve();
-            for(auto & in : info)
-              std::cerr << in.name.value() << std::endl;
             REQUIRE(info.size() == 4);
             CHECK(info[0].name == "hypervisor1");
             CHECK(info[1].name == "hypervisor3");
