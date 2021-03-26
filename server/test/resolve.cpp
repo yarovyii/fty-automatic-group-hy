@@ -67,11 +67,17 @@ TEST_CASE("Resolve by name")
                   name : datacenter
                   items:
                     - type     : Server
-                      name     : srv11
-                      ext-name : srv11
+                      name     : srv1
+                      ext-name : srv1
+                    - type     : Server
+                      name     : srv2
+                      ext-name : srv2
                 - type : Datacenter
                   name : datacenter1
                   items:
+                    - type     : Server
+                      name     : srv11
+                      ext-name : srv11
                     - type     : Server
                       name     : srv21
                       ext-name : srv21
@@ -87,14 +93,27 @@ TEST_CASE("Resolve by name")
 
         //"Contains"
         {
-            cond.value = "srv";
+            cond.value = "srv1";
             cond.op    = fty::Group::ConditionOp::Contains;
 
             auto g    = group.create();
             auto info = g.resolve();
 
             REQUIRE(info.size() == 2);
-            CHECK(info[0].name == "srv11");
+            CHECK(info[0].name == "srv1");
+            CHECK(info[1].name == "srv11");
+        }
+
+        //"DoesNotContain"
+        {
+            cond.value = "srv1";
+            cond.op    = fty::Group::ConditionOp::DoesNotContain;
+
+            auto g    = group.create();
+            auto info = g.resolve();
+
+            REQUIRE(info.size() == 2);
+            CHECK(info[0].name == "srv2");
             CHECK(info[1].name == "srv21");
         }
 
@@ -118,8 +137,10 @@ TEST_CASE("Resolve by name")
             auto g    = group.create();
             auto info = g.resolve();
 
-            REQUIRE(info.size() == 1);
-            CHECK(info[0].name == "srv21");
+            REQUIRE(info.size() == 3);
+            CHECK(info[0].name == "srv1");
+            CHECK(info[1].name == "srv2");
+            CHECK(info[2].name == "srv21");
         }
 
         //"Not exists"
@@ -175,6 +196,20 @@ TEST_CASE("Resolve by InternalName")
             REQUIRE(info.size() == 2);
             CHECK(info[0].name == "srv11");
             CHECK(info[1].name == "srv21");
+        }
+
+        //"DoesNotContain"
+        {
+            cond.value = "srv1";
+            cond.op    = fty::Group::ConditionOp::DoesNotContain;
+
+            auto g    = group.create();
+            auto info = g.resolve();
+
+            REQUIRE(info.size() == 3);
+            CHECK(info[0].name == "datacenter");
+            CHECK(info[1].name == "datacenter1");
+            CHECK(info[2].name == "srv21");
         }
 
         // Is
@@ -390,6 +425,18 @@ TEST_CASE("Resolve by location")
             CHECK(info[1].name == "srv21");
         }
 
+        //"DoesNotContain"
+        {
+            cond.value = "datacenter1";
+            cond.op    = fty::Group::ConditionOp::DoesNotContain;
+
+            auto g    = group.create();
+            auto info = g.resolve();
+
+            REQUIRE(info.size() == 1);
+            CHECK(info[0].name == "srv11");
+        }
+
         // "Is"
         {
             cond.value = "datacenter";
@@ -561,6 +608,20 @@ TEST_CASE("Resolve by type")
             CHECK(info[1].name == "srv21");
         }
 
+        //"DoesNotContain"
+        {
+            cond.value = "device";
+            cond.op    = fty::Group::ConditionOp::DoesNotContain;
+
+            auto g    = group.create();
+            auto info = g.resolve();
+
+            REQUIRE(info.size() == 2);
+            CHECK(info[0].name == "datacenter");
+            CHECK(info[1].name == "datacenter1");
+        }
+
+
         // Is
         {
             cond.value = "device";
@@ -641,6 +702,19 @@ TEST_CASE("Resolve by subtype")
             REQUIRE(info.size() == 2);
             CHECK(info[0].name == "srv11");
             CHECK(info[1].name == "srv21");
+        }
+
+        //"DoesNotContain"
+        {
+            cond.value = "serv";
+            cond.op    = fty::Group::ConditionOp::DoesNotContain;
+
+            auto g    = group.create();
+            auto info = g.resolve();
+
+            REQUIRE(info.size() == 2);
+            CHECK(info[0].name == "datacenter");
+            CHECK(info[1].name == "datacenter1");
         }
 
         // Is
@@ -724,6 +798,18 @@ TEST_CASE("Resolve by hostname")
 
             REQUIRE(info.size() == 1);
             CHECK(info[0].name == "srv11");
+        }
+
+        //"DoesNotContain"
+        {
+            cond.value = "local";
+            cond.op    = fty::Group::ConditionOp::DoesNotContain;
+
+            auto g    = group.create();
+            auto info = g.resolve();
+
+            REQUIRE(info.size() == 1); /// 0 == 1
+            CHECK(info[0].name == "srv21");
         }
 
         // Is
@@ -811,6 +897,20 @@ TEST_CASE("Resolve by contact")
             CHECK(info[1].name == "srv12");
         }
 
+        //"DoesNotContain"
+        {
+            cond.value = "dim";
+            cond.op    = fty::Group::ConditionOp::DoesNotContain;
+
+            auto g    = group.create();
+            auto info = g.resolve();
+
+            REQUIRE(info.size() == 3);
+            CHECK(info[0].name == "datacenter");
+            CHECK(info[1].name == "datacenter1");
+            CHECK(info[2].name == "srv21");
+        }
+
         // Is
         {
             cond.value = "dim";
@@ -894,6 +994,18 @@ TEST_CASE("Resolve by ip address")
 
             REQUIRE(info.size() == 1);
             CHECK(info[0].name == "srv11");
+        }
+
+        //"DoesNotContain"
+        {
+            cond.value = "127.0";
+            cond.op    = fty::Group::ConditionOp::DoesNotContain;
+
+            auto g    = group.create();
+            auto info = g.resolve();
+
+            REQUIRE(info.size() == 1);
+            CHECK(info[0].name == "srv21"); ////fail
         }
 
         // Is
@@ -1161,6 +1273,20 @@ TEST_CASE("Resolve by hostname vm")
             CHECK(info[1].name == "vm3");
         }
 
+        //"DoesNotContain"
+        {
+            cond1.op    = fty::Group::ConditionOp::DoesNotContain;
+            cond1.value = "po1";
+            cond1.field = fty::Group::Fields::HostName;
+
+            auto g    = group.create();
+            auto info = g.resolve();
+
+            REQUIRE(info.size() == 2);
+            CHECK(info[0].name == "vm1");
+            CHECK(info[1].name == "vm2");
+        }
+
         // Is
         {
             cond1.op    = fty::Group::ConditionOp::Is;
@@ -1269,6 +1395,18 @@ TEST_CASE("Resolve by ip address vm")
 
             REQUIRE(info.size() == 1);
             CHECK(info[0].name == "vm1");
+        }
+
+        //"DoesNotContain"
+        {
+            cond1.op    = fty::Group::ConditionOp::DoesNotContain;
+            cond1.value = "127.0";
+
+            auto g    = group.create();
+            auto info = g.resolve();
+            REQUIRE(info.size() == 2);
+            CHECK(info[0].name == "vm2");
+            CHECK(info[1].name == "vm3");
         }
 
         // Is
@@ -1384,6 +1522,19 @@ TEST_CASE("Resolve by hosted by")
             CHECK(info[0].name == "vm1");
             CHECK(info[1].name == "vm2");
             CHECK(info[2].name == "vm3");
+        }
+
+        // DoesNotContain
+        {
+            cond1.op    = fty::Group::ConditionOp::DoesNotContain;
+            cond1.value = "visor1";
+
+            auto g    = group.create();
+            auto info = g.resolve();
+
+            REQUIRE(info.size() == 2);
+            CHECK(info[0].name == "vm1");
+            CHECK(info[1].name == "vm2");
         }
 
         // Is

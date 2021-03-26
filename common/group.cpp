@@ -8,6 +8,8 @@ std::ostream& operator<<(std::ostream& ss, fty::Group::ConditionOp value)
         switch (value) {
             case fty::Group::ConditionOp::Contains:
                 return "CONTAINS";
+            case fty::Group::ConditionOp::DoesNotContain:
+                return "DOESNOTCONTAIN";
             case fty::Group::ConditionOp::Is:
                 return "IS";
             case fty::Group::ConditionOp::IsNot:
@@ -28,6 +30,8 @@ std::istream& operator>>(std::istream& ss, fty::Group::ConditionOp& value)
         value = fty::Group::ConditionOp::Contains;
     } else if (strval == "IS") {
         value = fty::Group::ConditionOp::Is;
+    } else if (strval == "DOESNOTCONTAIN") {
+        value = fty::Group::ConditionOp::DoesNotContain;
     } else if (strval == "ISNOT") {
         value = fty::Group::ConditionOp::IsNot;
     } else {
