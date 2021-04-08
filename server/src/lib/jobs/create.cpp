@@ -10,6 +10,10 @@ void Create::run(const commands::create::In& in, commands::create::Out& out)
         throw Error(ret.error());
     }
 
+    if (Storage::byName(in.name)) {
+        throw Error("Group with name '{}' already exists", in.name.value());
+    }
+
     fty::storage::Mutex::Write mx;
     std::lock_guard<fty::storage::Mutex::Write> lock(mx);
 
