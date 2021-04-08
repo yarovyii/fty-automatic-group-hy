@@ -15,6 +15,8 @@ static std::string op(const Group::Condition& cond)
     switch (cond.op) {
         case Group::ConditionOp::Contains:
             return "like";
+        case Group::ConditionOp::DoesNotContain:
+            return "not like";
         case Group::ConditionOp::Is:
             return "=";
         case Group::ConditionOp::IsNot:
@@ -27,7 +29,7 @@ static std::string op(const Group::Condition& cond)
 
 static std::string value(const Group::Condition& cond)
 {
-    if (cond.op == Group::ConditionOp::Contains) {
+    if (cond.op == Group::ConditionOp::Contains || cond.op == Group::ConditionOp::DoesNotContain) {
         return "%{}%"_format(cond.value.value());
     } else {
         return cond.value.value();
@@ -100,22 +102,24 @@ static std::string byInternalName(const Group::Condition& cond)
 
 static std::string byContact(const Group::Condition& cond)
 {
-    std::string sql = R"(
+    std::string tmpOp = op(cond);
+    std::string sql   = R"(
         SELECT id_asset_element
         FROM t_bios_asset_ext_attributes
         WHERE (keytag='device.contact' OR keytag='contact_email') AND
               value {op} '{val}')";
 
-    if (cond.op == Group::ConditionOp::IsNot) {
+    if (cond.op == Group::ConditionOp::IsNot || cond.op == Group::ConditionOp::DoesNotContain) {
         sql =
             "SELECT id_asset_element FROM t_bios_asset_element \
              WHERE id_asset_element NOT IN (" +
             sql + ")";
+        tmpOp = cond.op != Group::ConditionOp::IsNot ? "like" : "=";
     }
 
     // clang-format off
     return fmt::format(sql,
-        "op"_a  = cond.op != Group::ConditionOp::IsNot ? op(cond) : "=",
+        "op"_a  = tmpOp,
         "val"_a = value(cond)
     );
     // clang-format on
@@ -281,6 +285,7 @@ static std::string byLocation(tnt::Connection& conn, const Group::Condition& con
 
 static std::string byHostName(const Group::Condition& cond)
 {
+    std::string tmpOp = op(cond);
     std::string sql = R"(
         SELECT e.id_asset_element
         FROM t_bios_asset_element AS e
@@ -297,12 +302,13 @@ static std::string byHostName(const Group::Condition& cond)
             ))
     )";
 
-    if (cond.op == Group::ConditionOp::IsNot) {
+    if (cond.op == Group::ConditionOp::IsNot  || cond.op == Group::ConditionOp::DoesNotContain) {
         sql =
             "SELECT id_asset_element FROM t_bios_asset_element \
                WHERE (id_type = {dtype} OR (id_type = {vtype} AND id_subtype = {vsubtype})) AND \
                id_asset_element NOT IN (" +
             sql + ")";
+        tmpOp = cond.op != Group::ConditionOp::IsNot ? "like" : "=";
     }
 
     // clang-format off
@@ -310,7 +316,7 @@ static std::string byHostName(const Group::Condition& cond)
         "dtype"_a    = persist::DEVICE,
         "vtype"_a    = persist::VIRTUAL_MACHINE,
         "vsubtype"_a = persist::VMWARE_VM,
-        "op"_a       = cond.op != Group::ConditionOp::IsNot ? op(cond) : "=",
+        "op"_a       = tmpOp,
         "val"_a      = value(cond)
     );
     // clang-format on
@@ -321,7 +327,8 @@ static std::string byHostName(const Group::Condition& cond)
 
 static std::string byIpAddress(const Group::Condition& cond)
 {
-    auto addresses = fty::split(cond.value, "|");
+    auto        addresses = fty::split(cond.value, "|");
+    std::string tmpOp     = op(cond);
 
     auto conds = [&](bool isVirt) -> std::vector<std::string> {
         std::vector<std::string> ret;
@@ -334,8 +341,16 @@ static std::string byIpAddress(const Group::Condition& cond)
                     ret.push_back("a.value LIKE '{}%'"_format(pre));
                 }
             } else {
-                std::string sop   = cond.op == Group::ConditionOp::IsNot ? "=" : op(cond);
-                std::string saddr = cond.op == Group::ConditionOp::Contains ? "%" + addr + "%" : addr;
+                std::string sop;
+                std::string saddr;
+                if (cond.op == Group::ConditionOp::DoesNotContain) {
+                    sop   = "like";
+                    saddr = "%" + addr + "%";
+                } else {
+                    sop   = cond.op == Group::ConditionOp::IsNot ? "=" : op(cond);
+                    saddr = cond.op == Group::ConditionOp::Contains ? "%" + addr + "%" : addr;
+                }
+
                 if (isVirt) {
                     ret.push_back("a.value {} '[/{},]'"_format(sop, saddr));
                 } else {
@@ -363,7 +378,7 @@ static std::string byIpAddress(const Group::Condition& cond)
             ))
     )";
 
-    if (cond.op == Group::ConditionOp::IsNot) {
+    if (cond.op == Group::ConditionOp::IsNot || cond.op == Group::ConditionOp::DoesNotContain) {
         sql =
             "SELECT id_asset_element FROM t_bios_asset_element \
                 WHERE (\

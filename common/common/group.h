@@ -18,7 +18,8 @@ struct Group : public pack::Node
         Unknown,
         Contains,
         Is,
-        IsNot
+        IsNot,
+        DoesNotContain
     };
 
     enum class Fields
