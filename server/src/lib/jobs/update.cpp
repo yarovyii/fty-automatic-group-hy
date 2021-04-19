@@ -10,8 +10,9 @@ void Update::run(const commands::update::In& in, commands::update::Out& out)
         throw Error(ret.error());
     }
 
-    if (Storage::byName(in.name)) {
-        throw Error("Group with name '{}' already exists", in.name.value());
+    auto found = Storage::byName(in.name);
+    if (found && found->id != in.id) {
+        throw Error("Another group with name '{}' already exists", in.name.value());
     }
     
     fty::storage::Mutex::Write mx;
