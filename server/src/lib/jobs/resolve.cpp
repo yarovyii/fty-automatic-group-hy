@@ -302,7 +302,7 @@ static std::string byHostName(const Group::Condition& cond)
     if (cond.op == Group::ConditionOp::IsNot  || cond.op == Group::ConditionOp::DoesNotContain) {
         sql =
             "SELECT id_asset_element FROM t_bios_asset_element \
-               WHERE (id_type = {dtype} OR (id_type = {vtype} AND id_subtype = {vsubtype})) AND \
+               WHERE (id_type = {dtype} OR id_type = {vtype}) AND \
                id_asset_element NOT IN (" +
             sql + ")";
         tmpOp = cond.op != Group::ConditionOp::IsNot ? "like" : "=";
@@ -377,7 +377,7 @@ static std::string byIpAddress(const Group::Condition& cond)
         sql =
             "SELECT id_asset_element FROM t_bios_asset_element \
                 WHERE (\
-                    id_type = {dtype} OR (id_type = {vtype} AND id_subtype = {vsubtype})\
+                    id_type = {dtype} OR id_type = {vtype}\
                 ) AND id_asset_element NOT IN (" +
             sql + ")";
     }
