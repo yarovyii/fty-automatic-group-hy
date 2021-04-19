@@ -237,7 +237,6 @@ static std::string byLocation(tnt::Connection& conn, const Group::Condition& con
         WHERE
             l.id_asset_link_type IN ({linkTypes}) AND
             e.id_type = {type} AND
-            e.id_subtype = {subtype} AND
             e.id_asset_element in ({val})
         )";
 
@@ -250,8 +249,7 @@ static std::string byLocation(tnt::Connection& conn, const Group::Condition& con
         sqlVM = fmt::format(sqlVM,
             "linkTypes"_a = fty::implode(vmLinkTypes(), ", "), 
             "val"_a = sqlHypervisor, 
-            "type"_a = persist::HYPERVISOR,
-            "subtype"_a = persist::VMWARE_ESXI
+            "type"_a = persist::HYPERVISOR
         );
         // clang-format on  
 
@@ -297,8 +295,7 @@ static std::string byHostName(const Group::Condition& cond)
                 e.id_type = {dtype}
             ) OR (
                 a.keytag = 'hostName' AND
-                e.id_type = {vtype} AND
-                e.id_subtype = {vsubtype}
+                e.id_type = {vtype}
             ))
     )";
 
@@ -315,7 +312,6 @@ static std::string byHostName(const Group::Condition& cond)
     std::string ret = fmt::format(sql,
         "dtype"_a    = persist::DEVICE,
         "vtype"_a    = persist::VIRTUAL_MACHINE,
-        "vsubtype"_a = persist::VMWARE_VM,
         "op"_a       = tmpOp,
         "val"_a      = value(cond)
     );
@@ -373,8 +369,7 @@ static std::string byIpAddress(const Group::Condition& cond)
             ) OR (
                 {vval} AND
                 a.keytag = 'address' AND
-                e.id_type = {vtype} AND
-                e.id_subtype = {vsubtype}
+                e.id_type = {vtype}
             ))
     )";
 
@@ -391,7 +386,6 @@ static std::string byIpAddress(const Group::Condition& cond)
     std::string ret = fmt::format(sql,
         "dtype"_a    = persist::DEVICE,
         "vtype"_a    = persist::VIRTUAL_MACHINE,
-        "vsubtype"_a = persist::VMWARE_VM,
         "dval"_a     = fty::implode(conds(false), " OR "),
         "vval"_a     = fty::implode(conds(true), " OR ")
     );
@@ -409,7 +403,6 @@ static std::string byHostedBy(const Group::Condition& cond)
         WHERE
             l.id_asset_link_type IN ({linkTypes}) AND
             e.id_type = {type} AND
-            e.id_subtype = {subtype} AND
             e.name {op} '{val}'
     )";
 
@@ -418,8 +411,7 @@ static std::string byHostedBy(const Group::Condition& cond)
         "linkTypes"_a = fty::implode(vmLinkTypes(), ", "),
         "op"_a        = op(cond),
         "val"_a       = value(cond),
-        "type"_a      = persist::HYPERVISOR,
-        "subtype"_a   = persist::VMWARE_ESXI
+        "type"_a      = persist::HYPERVISOR
     );
     // clang-format on
 }
