@@ -294,7 +294,7 @@ static std::string byHostName(const Group::Condition& cond)
                 a.keytag='hostname.1' AND
                 e.id_type = {dtype}
             ) OR (
-                a.keytag = 'hostName' AND
+                a.keytag = 'hostname' AND
                 e.id_type = {vtype}
             ))
     )";
@@ -368,7 +368,7 @@ static std::string byIpAddress(const Group::Condition& cond)
                 e.id_type = {dtype}
             ) OR (
                 {vval} AND
-                a.keytag = 'address' AND
+                a.keytag = 'ip' AND
                 e.id_type = {vtype}
             ))
     )";
