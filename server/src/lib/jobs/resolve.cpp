@@ -35,8 +35,9 @@ static std::string value(const Group::Condition& cond, std::string (*f)(const st
         //Escape the forbiden char at first
         std::string val = cond.value.value();
 
-        val = std::regex_replace (val, std::regex("%"), "\\%");
-        val = std::regex_replace (val, std::regex("_"), "\\_");
+        val = std::regex_replace (val, std::regex(R"(\\)"), R"(\\\\)");
+        val = std::regex_replace (val, std::regex(R"(%)"), R"(\%)");
+        val = std::regex_replace (val, std::regex(R"(_)"), R"(\_)");
 
         if(f) {
             val = f(val);
@@ -355,7 +356,7 @@ static std::string byIpAddress(const Group::Condition& cond)
     }
 
     auto replaceStarByPercent= [] (const std::string & val){
-        return std::regex_replace (val, std::regex("\\*"), "%");
+        return std::regex_replace (val, std::regex(R"(\*)", R"(%)");
     };
     // clang-format off
     std::string ret = fmt::format(sql,
