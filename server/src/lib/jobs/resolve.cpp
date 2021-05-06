@@ -356,7 +356,7 @@ static std::string byIpAddress(const Group::Condition& cond)
     }
 
     auto replaceStarByPercent= [] (const std::string & val){
-        return std::regex_replace (val, std::regex(R"(\*)", R"(%)");
+        return std::regex_replace (val, std::regex(R"(\*)"), R"(%)");
     };
     // clang-format off
     std::string ret = fmt::format(sql,
