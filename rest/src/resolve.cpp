@@ -2,9 +2,10 @@
 #include "common/commands.h"
 #include "common/message-bus.h"
 #include "group-rest.h"
-#include <fty/rest/component.h>
 #include <asset/json.h>
+#include <fty/rest/component.h>
 #include <fty/split.h>
+#include <fty_log.h>
 
 namespace fty::agroup {
 
@@ -28,7 +29,19 @@ unsigned Resolve::run()
     fty::Message msg = message(fty::commands::resolve::Subject);
 
     fty::commands::resolve::In in;
-    in.id = fty::convert<uint16_t>(*strIdPrt);
+    if (strIdPrt.value() != "0") {
+        in.id = fty::convert<uint16_t>(*strIdPrt);
+    } else {
+        std::string jsonBody = m_request.body();
+        if (jsonBody.empty()) {
+            throw rest::errors::BadInput("Group payload is empty");
+        }
+
+        in.id = 0;
+        if (auto ret = pack::yaml::deserialize(jsonBody, in); !ret) {
+            throw std::runtime_error(ret.error());
+        }
+    }
 
     msg.setData(*pack::json::serialize(in));
 
@@ -38,13 +51,13 @@ unsigned Resolve::run()
     }
 
     commands::resolve::Out data;
-    auto info = pack::json::deserialize(ret->userData[0], data);
+    auto                   info = pack::json::deserialize(ret->userData[0], data);
     if (!info) {
         throw rest::errors::Internal(info.error());
     }
 
     std::vector<std::string> out;
-    for(const auto& it: data) {
+    for (const auto& it : data) {
         std::string json = asset::getJsonAsset(fty::convert<uint32_t>(it.id.value()));
         if (json.empty()) {
             throw rest::errors::Internal("Cannot build asset information");

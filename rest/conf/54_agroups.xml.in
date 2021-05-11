@@ -8,6 +8,15 @@
 </mapping>
 
 <mapping>
+    <target>agroup/resolve@lib${NAME}-rest</target>
+    <url>^/api/v1/automaticgroup/(.+)/posti$</url>
+    <method>POST</method>
+    <args>
+      <id>$1</id>
+    </args>
+</mapping>
+
+<mapping>
     <target>agroup/read@lib${NAME}-rest</target>
     <url>^/api/v1/automaticgroup/(.+)$</url>
     <method>GET</method>

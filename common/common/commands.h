@@ -33,9 +33,10 @@ namespace commands::resolve {
     struct Request : public pack::Node
     {
         pack::UInt64 id = FIELD("id");
-
+        fty::Group::Rules rules = FIELD("rules");
+        
         using pack::Node::Node;
-        META(Request, id);
+        META(Request, id, rules);
     };
 
     struct Answer : public pack::Node

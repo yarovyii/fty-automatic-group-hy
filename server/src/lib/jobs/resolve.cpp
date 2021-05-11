@@ -479,9 +479,16 @@ void Resolve::run(const commands::resolve::In& in, commands::resolve::Out& asset
 {
     logDebug("resolve {}", *pack::json::serialize(in));
 
-    auto group = Storage::byId(in.id);
-    if (!group) {
-        throw Error(group.error());
+    fty::Group group;
+    if (in.id) {
+        auto groupTmp = Storage::byId(in.id);
+
+        if (!groupTmp) {
+            throw Error(groupTmp.error());
+        }
+        group = groupTmp.value();
+    } else {
+        group.rules = in.rules;
     }
 
     // Normal connect in _this_ thread, otherwise tntdb will fail
@@ -489,7 +496,7 @@ void Resolve::run(const commands::resolve::In& in, commands::resolve::Out& asset
     // Normal connection, continue my sad work with db
     tnt::Connection conn;
 
-    std::string groups = groupSql(conn, group->rules);
+    std::string groups = groupSql(conn, group.rules);
 
     std::string sql = R"(
         SELECT
