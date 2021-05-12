@@ -9,11 +9,8 @@
 
 <mapping>
     <target>agroup/resolve@lib${NAME}-rest</target>
-    <url>^/api/v1/automaticgroup/(.+)/posti$</url>
+    <url>^/api/v1/automaticgroup/content$</url>
     <method>POST</method>
-    <args>
-      <id>$1</id>
-    </args>
 </mapping>
 
 <mapping>

@@ -65,7 +65,6 @@ TEST_CASE("Resolve by name with rules input")
       fty::commands::resolve::In  in;
       fty::commands::resolve::Out out;
 
-      in.id = 0;
       if (auto ret = pack::yaml::deserialize(json, in); !ret) {
           throw std::runtime_error(ret.error());
       }

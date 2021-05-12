@@ -5,7 +5,6 @@
 #include <asset/json.h>
 #include <fty/rest/component.h>
 #include <fty/split.h>
-#include <fty_log.h>
 
 namespace fty::agroup {
 
@@ -16,9 +15,14 @@ unsigned Resolve::run()
         throw rest::Error(ret.error());
     }
 
-    auto strIdPrt = m_request.queryArg<std::string>("id");
+    auto        strIdPrt = m_request.queryArg<std::string>("id");
+    std::string jsonBody;
+
     if (!strIdPrt) {
-        throw rest::errors::RequestParamRequired("id");
+        jsonBody = m_request.body();
+        if (jsonBody.empty()) {
+            throw rest::errors::RequestParamRequired("id or rules");
+        }
     }
 
     fty::MessageBus bus;
@@ -29,18 +33,10 @@ unsigned Resolve::run()
     fty::Message msg = message(fty::commands::resolve::Subject);
 
     fty::commands::resolve::In in;
-    if (strIdPrt.value() != "0") {
+    if (jsonBody.empty()) {
         in.id = fty::convert<uint16_t>(*strIdPrt);
-    } else {
-        std::string jsonBody = m_request.body();
-        if (jsonBody.empty()) {
-            throw rest::errors::BadInput("Group payload is empty");
-        }
-
-        in.id = 0;
-        if (auto ret = pack::yaml::deserialize(jsonBody, in); !ret) {
-            throw std::runtime_error(ret.error());
-        }
+    } else if (auto ret = pack::yaml::deserialize(jsonBody, in); !ret) {
+        throw rest::errors::Internal(ret.error());
     }
 
     msg.setData(*pack::json::serialize(in));
