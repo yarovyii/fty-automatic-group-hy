@@ -337,6 +337,7 @@ static std::string byIpAddress(const Group::Condition& cond)
         SELECT e.id_asset_element
         FROM t_bios_asset_element AS e
         LEFT JOIN t_bios_asset_ext_attributes a ON e.id_asset_element = a.id_asset_element
+        LEFT JOIN t_bios_asset_element_type t ON e.id_type = t.id_asset_element_type
         WHERE
             a.value {op} '{val}' AND
             ((
@@ -344,6 +345,7 @@ static std::string byIpAddress(const Group::Condition& cond)
             ) OR (
                 a.keytag = 'ip' 
             ))
+            AND t.name != "virtual-machine"
     )";
 
 
