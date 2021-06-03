@@ -16,6 +16,7 @@ Build-Depends:
     libfty-asset-dev,
     libfty-common-dev,
     libfty-common-mlm-dev,
+    libfty-common-socket-dev,
     libcxxtools-dev,
     libprotobuf-dev
 Standards-Version: 1.0.0
