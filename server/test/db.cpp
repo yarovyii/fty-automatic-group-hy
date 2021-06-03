@@ -1,5 +1,5 @@
 #include "db.h"
-#include <asset/test-db.h>
+#include <test-db/test-db.h>
 #include <pack/pack.h>
 
 namespace fty {

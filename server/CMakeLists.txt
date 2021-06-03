@@ -44,9 +44,14 @@ etn_target(static ${PROJECT_NAME}-static
         ${PROJECT_NAME}-common
         pthread
         fty-asset-libng
+        fty_common_socket
         fty_common_dto
+        fty_common_db
+        fty_common
         protobuf
         stdc++fs
+        tntdb
+        cxxtools
     PRIVATE
 )
 
@@ -57,8 +62,6 @@ etn_target(exe ${PROJECT_NAME}
         src/main.cpp
     USES
         ${PROJECT_NAME}-static
-        cxxtools
-        tntdb
         fty_common_db
 )
 
@@ -85,32 +88,30 @@ etn_configure_file(
 
 ########################################################################################################################
 
-if (BUILD_TESTING)
-    etn_test(${PROJECT_NAME}-test
-        SOURCES
-            test/main.cpp
-            test/storage.cpp
-            test/list.cpp
-            test/create.cpp
-            test/read.cpp
-            test/resolve.cpp
-            test/mutex.cpp
+etn_test_target(${PROJECT_NAME}-static
+    SOURCES
+        test/main.cpp
+        test/storage.cpp
+        test/list.cpp
+        test/create.cpp
+        test/read.cpp
+        test/resolve.cpp
+        test/mutex.cpp
 
-            test/db.cpp
-            test/db.h
-        CONFIGS
-            test/conf/agroup.conf
-            test/conf/logger.conf
-
-        INCLUDE_DIRS src
-        USES
-            ${PROJECT_NAME}-static
-            fty_common_db
-            tntdb
-            mysqld
-            stdc++fs
-            cxxtools
-    )
-endif()
+        test/db.cpp
+        test/db.h
+    INCLUDE_DIRS
+        src
+    CONFIGS
+        test/conf/agroup.conf
+        test/conf/logger.conf
+    USES
+        tntdb
+        mysqld
+        cxxtools
+        fty-asset-test-db
+    SUBDIR
+        test
+)
 
 ########################################################################################################################

@@ -19,8 +19,10 @@ etn_target(shared ${PROJECT_NAME}-rest
         src/resolve.cpp
     USES
         fty-cmake-rest
+        cxxtools
         tntnet
         fty_common_rest
+        fty_common
         ${PROJECT_NAME}-common
         fty-asset-libng
         fty_common_messagebus

@@ -4,7 +4,6 @@
 
 #include "db.h"
 
-
 TEST_CASE("Create")
 {
     REQUIRE(fty::GroupsDB::init());
