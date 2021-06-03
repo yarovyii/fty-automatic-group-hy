@@ -4,7 +4,7 @@
 #include <thread>
 #include <vector>
 
-TEST_CASE("Lock/Unlock storage Mutex")
+TEST_CASE("Lock/Unlock storage Mutex", "[.]")
 {
     bool                     th1    = false;
     std::atomic<size_t>      result = 0;
