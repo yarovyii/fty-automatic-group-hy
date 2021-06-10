@@ -1,8 +1,5 @@
 #include <atomic>
 #include <catch2/catch.hpp>
-#include <chrono>
-#include <condition_variable>
-#include <iostream>
 #include <lib/mutex.h>
 #include <thread>
 #include <vector>
