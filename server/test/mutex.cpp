@@ -6,7 +6,7 @@
 
 std::condition_variable cvGlob;
 
-bool check(const bool& th, std::condition_variable& cv = cvGlob)
+bool check(bool& th, std::condition_variable& cv = cvGlob)
 {
     using namespace std::chrono_literals;
     std::mutex                   mx;
@@ -17,7 +17,7 @@ bool check(const bool& th, std::condition_variable& cv = cvGlob)
     });
 }
 
-TEST_CASE("Lock/Unlock storage Mutex", "[.]")
+TEST_CASE("Lock/Unlock storage Mutex")
 {
     bool                     th1    = false;
     std::atomic<size_t>      result = 0;
