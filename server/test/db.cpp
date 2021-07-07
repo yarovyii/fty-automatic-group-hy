@@ -112,7 +112,7 @@ std::istream& operator>>(std::istream& ss, DBData::Types& value)
         value = DBData::Types::InfraService;
     } else if (strval == "Hypervisor") {
         value = DBData::Types::Hypervisor;
-    } else if (strval == "VirtualMachine") {
+    } else if (strval == "virtual-machine") {
         value = DBData::Types::VirtualMachine;
     } else if (strval == "Room") {
         value = DBData::Types::Room;

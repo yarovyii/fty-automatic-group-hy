@@ -27,10 +27,23 @@ static std::string op(const Group::Condition& cond)
     return "unknown";
 }
 
-static std::string value(const Group::Condition& cond)
+
+static std::string value(const Group::Condition& cond, std::string (*f)(const std::string&) = nullptr )
 {
     if (cond.op == Group::ConditionOp::Contains || cond.op == Group::ConditionOp::DoesNotContain) {
-        return "%{}%"_format(cond.value.value());
+        //Like or not like
+        //Escape the forbiden char at first
+        std::string val = cond.value.value();
+
+        val = std::regex_replace (val, std::regex(R"(\\)"), R"(\\\\)");
+        val = std::regex_replace (val, std::regex(R"(%)"), R"(\%)");
+        val = std::regex_replace (val, std::regex(R"(_)"), R"(\_)");
+
+        if(f) {
+            val = f(val);
+        }
+
+        return "%{}%"_format(val);
     } else {
         return cond.value.value();
     }
@@ -184,7 +197,7 @@ static std::string byLocation(tnt::Connection& conn, const Group::Condition& con
     std::string dcSql = R"(
         SELECT id_asset_element
         FROM t_bios_asset_element
-        WHERE id_type in ({avail}) AND name {op} '{val}' AND name <> 'rackcontroller-0')";
+        WHERE id_type in ({avail}) AND name {op} '{val}')";
 
     std::vector<int> avail = {persist::DATACENTER, persist::ROW, persist::RACK, persist::ROOM};
     // clang-format off
@@ -237,7 +250,6 @@ static std::string byLocation(tnt::Connection& conn, const Group::Condition& con
         WHERE
             l.id_asset_link_type IN ({linkTypes}) AND
             e.id_type = {type} AND
-            e.id_subtype = {subtype} AND
             e.id_asset_element in ({val})
         )";
 
@@ -250,8 +262,7 @@ static std::string byLocation(tnt::Connection& conn, const Group::Condition& con
         sqlVM = fmt::format(sqlVM,
             "linkTypes"_a = fty::implode(vmLinkTypes(), ", "), 
             "val"_a = sqlHypervisor, 
-            "type"_a = persist::HYPERVISOR,
-            "subtype"_a = persist::VMWARE_ESXI
+            "type"_a = persist::HYPERVISOR
         );
         // clang-format on  
 
@@ -293,29 +304,23 @@ static std::string byHostName(const Group::Condition& cond)
         WHERE
             a.value {op} '{val}' AND
             ((
-                a.keytag='hostname.1' AND
-                e.id_type = {dtype}
+                a.keytag='hostname.1'
             ) OR (
-                a.keytag = 'hostName' AND
-                e.id_type = {vtype} AND
-                e.id_subtype = {vsubtype}
+                a.keytag = 'hostname' 
             ))
     )";
+
 
     if (cond.op == Group::ConditionOp::IsNot  || cond.op == Group::ConditionOp::DoesNotContain) {
         sql =
             "SELECT id_asset_element FROM t_bios_asset_element \
-               WHERE (id_type = {dtype} OR (id_type = {vtype} AND id_subtype = {vsubtype})) AND \
-               id_asset_element NOT IN (" +
+             WHERE id_asset_element NOT IN (" +
             sql + ")";
         tmpOp = cond.op != Group::ConditionOp::IsNot ? "like" : "=";
     }
 
     // clang-format off
     std::string ret = fmt::format(sql,
-        "dtype"_a    = persist::DEVICE,
-        "vtype"_a    = persist::VIRTUAL_MACHINE,
-        "vsubtype"_a = persist::VMWARE_VM,
         "op"_a       = tmpOp,
         "val"_a      = value(cond)
     );
@@ -327,73 +332,38 @@ static std::string byHostName(const Group::Condition& cond)
 
 static std::string byIpAddress(const Group::Condition& cond)
 {
-    auto        addresses = fty::split(cond.value, "|");
-    std::string tmpOp     = op(cond);
-
-    auto conds = [&](bool isVirt) -> std::vector<std::string> {
-        std::vector<std::string> ret;
-        for (const auto& addr : addresses) {
-            if (size_t pos = addr.find("*"); pos != std::string::npos) {
-                std::string pre = addr.substr(0, pos);
-                if (isVirt) {
-                    ret.push_back("a.value LIKE '[/{}%,]'"_format(pre));
-                } else {
-                    ret.push_back("a.value LIKE '{}%'"_format(pre));
-                }
-            } else {
-                std::string sop;
-                std::string saddr;
-                if (cond.op == Group::ConditionOp::DoesNotContain) {
-                    sop   = "like";
-                    saddr = "%" + addr + "%";
-                } else {
-                    sop   = cond.op == Group::ConditionOp::IsNot ? "=" : op(cond);
-                    saddr = cond.op == Group::ConditionOp::Contains ? "%" + addr + "%" : addr;
-                }
-
-                if (isVirt) {
-                    ret.push_back("a.value {} '[/{},]'"_format(sop, saddr));
-                } else {
-                    ret.push_back("a.value {} '{}'"_format(sop, saddr));
-                }
-            }
-        }
-        return ret;
-    };
-
+    std::string tmpOp = op(cond);
     std::string sql = R"(
         SELECT e.id_asset_element
-        FROM t_bios_asset_element e
+        FROM t_bios_asset_element AS e
         LEFT JOIN t_bios_asset_ext_attributes a ON e.id_asset_element = a.id_asset_element
+        LEFT JOIN t_bios_asset_element_type t ON e.id_type = t.id_asset_element_type
         WHERE
+            a.value {op} '{val}' AND
             ((
-                {dval} AND
-                a.keytag='ip.1' AND
-                e.id_type = {dtype}
+                a.keytag='ip.1'
             ) OR (
-                {vval} AND
-                a.keytag = 'address' AND
-                e.id_type = {vtype} AND
-                e.id_subtype = {vsubtype}
+                a.keytag = 'ip' 
             ))
+            AND t.name != "virtual-machine"
     )";
 
-    if (cond.op == Group::ConditionOp::IsNot || cond.op == Group::ConditionOp::DoesNotContain) {
+
+    if (cond.op == Group::ConditionOp::IsNot  || cond.op == Group::ConditionOp::DoesNotContain) {
         sql =
             "SELECT id_asset_element FROM t_bios_asset_element \
-                WHERE (\
-                    id_type = {dtype} OR (id_type = {vtype} AND id_subtype = {vsubtype})\
-                ) AND id_asset_element NOT IN (" +
+             WHERE id_asset_element NOT IN (" +
             sql + ")";
+        tmpOp = cond.op != Group::ConditionOp::IsNot ? "like" : "=";
     }
 
+    auto replaceStarByPercent= [] (const std::string & val){
+        return std::regex_replace (val, std::regex(R"(\*)"), R"(%)");
+    };
     // clang-format off
     std::string ret = fmt::format(sql,
-        "dtype"_a    = persist::DEVICE,
-        "vtype"_a    = persist::VIRTUAL_MACHINE,
-        "vsubtype"_a = persist::VMWARE_VM,
-        "dval"_a     = fty::implode(conds(false), " OR "),
-        "vval"_a     = fty::implode(conds(true), " OR ")
+        "op"_a       = tmpOp,
+        "val"_a      = value(cond, replaceStarByPercent)
     );
     // clang-format on
     return ret;
@@ -409,7 +379,6 @@ static std::string byHostedBy(const Group::Condition& cond)
         WHERE
             l.id_asset_link_type IN ({linkTypes}) AND
             e.id_type = {type} AND
-            e.id_subtype = {subtype} AND
             e.name {op} '{val}'
     )";
 
@@ -418,8 +387,7 @@ static std::string byHostedBy(const Group::Condition& cond)
         "linkTypes"_a = fty::implode(vmLinkTypes(), ", "),
         "op"_a        = op(cond),
         "val"_a       = value(cond),
-        "type"_a      = persist::HYPERVISOR,
-        "subtype"_a   = persist::VMWARE_ESXI
+        "type"_a      = persist::HYPERVISOR
     );
     // clang-format on
 }
@@ -545,7 +513,7 @@ void Resolve::run(const commands::resolve::In& in, commands::resolve::Out& asset
             id_asset_element as id,
             name
         FROM t_bios_asset_element
-        WHERE id_asset_element IN ({})
+        WHERE id_asset_element IN ({}) AND name <> 'rackcontroller-0'
         ORDER BY id
     )"_format(groups);
 

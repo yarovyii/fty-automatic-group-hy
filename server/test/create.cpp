@@ -201,6 +201,7 @@ TEST_CASE("Create")
         REQUIRE_THROWS_WITH(create.run(group, created), "Value of condition is expected");
     }
 
+
     SECTION("From yaml, group CONTAINS")
     {
         static std::string jaml(R"(
@@ -221,6 +222,39 @@ TEST_CASE("Create")
         fty::job::Create create;
         fty::Group       created;
         REQUIRE_THROWS_WITH(create.run(group, created), "Valid value of condition for linked group is expected");
+          }
+
+    CHECK(fty::Storage::clear());
+
+  
+    SECTION("Unique name")
+    {
+        std::string json = R"(
+            {
+                "name": "By types",
+                "rules": {
+                    "conditions": [
+                        {
+                            "field": "type",
+                            "operator": "IS",
+                            "value": "srv"
+                        }
+                    ],
+                    "operator": "OR"
+                }
+            }
+        )";
+
+        fty::Group group;
+        pack::json::deserialize(json, group);
+
+        fty::job::Create create;
+
+        fty::Group created;
+        REQUIRE_NOTHROW(create.run(group, created));
+
+        fty::Group other;
+        REQUIRE_THROWS_WITH(create.run(group, other), "Group with name 'By types' already exists");
     }
 
     CHECK(fty::Storage::clear());
